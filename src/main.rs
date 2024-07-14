@@ -1,49 +1,15 @@
 use std::{
     env,
-    error::Error,
-    fmt,
     io::{self, Write},
 };
 
-enum RatexError {
-    UnknownTokenError(String),
-}
+mod error;
+use error::RatexErrorType;
 
-impl fmt::Display for RatexError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::UnknownTokenError(token) => {
-                write!(f, "Unknown Token: {}", token)
-            }
-        }
-    }
-}
+use crate::error::RatexError;
 
-impl fmt::Debug for RatexError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::UnknownTokenError(token) => {
-                write!(f, "Unknown Token: {}", token)
-            }
-        }
-    }
-}
-
-impl Error for RatexError {}
-
-enum RatexToken {
-    Number,
-}
-
-impl fmt::Display for RatexToken {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Self::Number => {
-                write!(f, "Number")
-            }
-        }
-    }
-}
+mod token;
+use crate::token::RatexTokenType;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -91,7 +57,7 @@ fn run_prompt() -> Result<(), RatexError> {
             break;
         };
 
-        run(prompt)?;
+        run(prompt.trim().to_owned())?;
     }
 
     Ok(())
@@ -99,17 +65,20 @@ fn run_prompt() -> Result<(), RatexError> {
 
 fn run(code: String) -> Result<(), RatexError> {
     if code == "exit" {
-        return Err(RatexError::UnknownTokenError("exit".to_owned()));
-    }
-    let tokens: Vec<RatexToken> = scan_tokens(code)?;
+        return Err(RatexError {
+            source: RatexErrorType::UnknownTokenError(0, "exit".to_owned()),
+        });
+    } else {
+        let tokens: Vec<RatexTokenType> = scan_tokens(code)?;
 
-    for token in tokens {
-        println!("{token}");
+        for token in tokens {
+            println!("{token}");
+        }
     }
 
     Ok(())
 }
 
-fn scan_tokens(code: String) -> Result<Vec<RatexToken>, RatexError> {
-    Ok(vec![RatexToken::Number])
+fn scan_tokens(code: String) -> Result<Vec<RatexTokenType>, RatexError> {
+    Ok(vec![RatexTokenType::Number(1.0)])
 }
