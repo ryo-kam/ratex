@@ -5,6 +5,32 @@ use std::{
     io::{self, Write},
 };
 
+enum RatexError {
+    UnknownTokenError(String),
+}
+
+impl fmt::Display for RatexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::UnknownTokenError(token) => {
+                write!(f, "Unknown Token: {}", token)
+            }
+        }
+    }
+}
+
+impl fmt::Debug for RatexError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::UnknownTokenError(token) => {
+                write!(f, "Unknown Token: {}", token)
+            }
+        }
+    }
+}
+
+impl Error for RatexError {}
+
 enum RatexToken {
     Number,
 }
@@ -28,7 +54,7 @@ fn main() {
         let result = run_file(args[0].clone());
         match result {
             Ok(()) => {
-                println!("Bye bye!")
+                println!("Done!")
             }
             Err(e) => {
                 println!("Error: {e}");
@@ -38,7 +64,7 @@ fn main() {
         let result = run_prompt();
         match result {
             Ok(()) => {
-                println!("Bye bye!")
+                println!("Done!")
             }
             Err(e) => {
                 println!("Error: {e}")
@@ -47,21 +73,21 @@ fn main() {
     }
 }
 
-fn run_file(path: String) -> Result<(), Box<dyn Error>> {
-    let file = std::fs::read_to_string(path)?;
+fn run_file(path: String) -> Result<(), RatexError> {
+    let file = std::fs::read_to_string(path).unwrap();
     run(file)
 }
 
-fn run_prompt() -> Result<(), Box<dyn Error>> {
+fn run_prompt() -> Result<(), RatexError> {
     println!("Prompt mode");
 
     loop {
         let mut prompt = String::new();
         print!("> ");
-        io::stdout().flush()?;
-        io::stdin().read_line(&mut prompt)?;
+        let _ = io::stdout().flush();
+        let _ = io::stdin().read_line(&mut prompt);
 
-        if prompt.is_empty() {
+        if prompt.len() == 2 {
             break;
         };
 
@@ -71,7 +97,10 @@ fn run_prompt() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn run(code: String) -> Result<(), Box<dyn Error>> {
+fn run(code: String) -> Result<(), RatexError> {
+    if code == "exit" {
+        return Err(RatexError::UnknownTokenError("exit".to_owned()));
+    }
     let tokens: Vec<RatexToken> = scan_tokens(code)?;
 
     for token in tokens {
@@ -81,7 +110,6 @@ fn run(code: String) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn scan_tokens(code: String) -> Result<Vec<RatexToken>, Box<dyn Error>> {
-    println!("{code}");
+fn scan_tokens(code: String) -> Result<Vec<RatexToken>, RatexError> {
     Ok(vec![RatexToken::Number])
 }
