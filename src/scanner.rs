@@ -1,4 +1,4 @@
-use std::{iter::Peekable, str::Chars};
+use std::{fmt::Error, iter::Peekable, str::Chars};
 
 use crate::{
     error::{RatexError, RatexErrorType},
@@ -98,6 +98,11 @@ impl<'a> Scanner<'a> {
                     self.add_token(RXTT::Slash)
                 }
             }
+            '"' => match self.scan_string() {
+                Err(e) => err = Some(e),
+                _ => {}
+            },
+            '0'..'9' => self.scan_number()?,
             ' ' | '\r' | '\t' => {}
             '\n' => self.line += 1,
             _ => {
@@ -145,5 +150,55 @@ impl<'a> Scanner<'a> {
             }
             None => false,
         }
+    }
+
+    fn scan_string(&mut self) -> Result<(), RatexError> {
+        while !self.is_at_end() && *self.chars.peek().unwrap() != '"' {
+            if *self.chars.peek().unwrap() == '\n' {
+                self.line += 1;
+            }
+            self.advance();
+        }
+
+        if self.is_at_end() {
+            return Err(RatexError {
+                source: RatexErrorType::UnterminatedString,
+            });
+        }
+
+        self.advance();
+
+        let value = self
+            .source
+            .get(self.start + 1..self.current - 1)
+            .unwrap()
+            .to_owned();
+
+        self.add_token(RatexTokenType::String(value));
+        Ok(())
+    }
+
+    fn scan_number(&mut self) -> Result<(), RatexError> {
+        while !self.is_at_end() && self.chars.peek().unwrap().is_digit(10) {
+            self.advance();
+        }
+
+        if !self.is_at_end() && *self.chars.peek().unwrap() == '.' {
+            self.advance();
+
+            while !self.is_at_end() && self.chars.peek().unwrap().is_digit(10) {
+                self.advance();
+            }
+        }
+
+        self.add_token(RatexTokenType::Number(
+            self.source
+                .get(self.start..self.current)
+                .unwrap()
+                .parse::<f64>()
+                .unwrap(),
+        ));
+
+        Ok(())
     }
 }

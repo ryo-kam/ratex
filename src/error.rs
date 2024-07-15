@@ -24,6 +24,7 @@ impl Error for RatexError {
 pub enum RatexErrorType {
     UnknownTokenError(u32, String),
     ScanOutOfRangeError(u32),
+    UnterminatedString,
 }
 
 impl Display for RatexErrorType {
@@ -34,6 +35,9 @@ impl Display for RatexErrorType {
             }
             Self::ScanOutOfRangeError(index) => {
                 write!(f, "tried to scan invalid index: {}", index)
+            }
+            Self::UnterminatedString => {
+                write!(f, "unterminated string")
             }
         }
     }
