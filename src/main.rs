@@ -5,11 +5,14 @@ use std::{
 
 mod error;
 use error::RatexErrorType;
+use scanner::Scanner;
 
 use crate::error::RatexError;
 
 mod token;
 use crate::token::RatexTokenType;
+
+mod scanner;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -64,12 +67,16 @@ fn run_prompt() -> Result<(), RatexError> {
 }
 
 fn run(code: String) -> Result<(), RatexError> {
+    let mut scanner = Scanner::new(code.as_str());
+
     if code == "exit" {
         return Err(RatexError {
             source: RatexErrorType::UnknownTokenError(0, "exit".to_owned()),
         });
     } else {
-        let tokens: Vec<RatexTokenType> = scan_tokens(code)?;
+        scanner.scan_tokens()?;
+
+        let tokens = scanner.tokens;
 
         for token in tokens {
             println!("{token}");
@@ -77,8 +84,4 @@ fn run(code: String) -> Result<(), RatexError> {
     }
 
     Ok(())
-}
-
-fn scan_tokens(code: String) -> Result<Vec<RatexTokenType>, RatexError> {
-    Ok(vec![RatexTokenType::Number(1.0)])
 }

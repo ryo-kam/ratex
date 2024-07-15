@@ -1,9 +1,9 @@
 use std::fmt::{Display, Formatter, Result};
 
 pub struct RatexToken {
-    token: RatexTokenType,
-    lexeme: String,
-    line: u32,
+    pub token: RatexTokenType,
+    pub lexeme: String,
+    pub line: u32,
 }
 
 impl Display for RatexToken {

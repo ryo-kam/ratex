@@ -23,6 +23,7 @@ impl Error for RatexError {
 #[derive(Debug)]
 pub enum RatexErrorType {
     UnknownTokenError(u32, String),
+    ScanOutOfRangeError(u32),
 }
 
 impl Display for RatexErrorType {
@@ -30,6 +31,9 @@ impl Display for RatexErrorType {
         match self {
             Self::UnknownTokenError(line, token) => {
                 write!(f, "unknown token on line {}: {}", line, token)
+            }
+            Self::ScanOutOfRangeError(index) => {
+                write!(f, "tried to scan invalid index: {}", index)
             }
         }
     }
