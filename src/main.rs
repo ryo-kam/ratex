@@ -4,23 +4,30 @@ use std::{
 };
 
 mod error;
+mod scanner;
+mod token;
+
 use error::RatexErrorType;
 use scanner::Scanner;
 
 use crate::error::RatexError;
 
-mod token;
-use crate::token::RatexTokenType;
-
-mod scanner;
-
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 2 {
-        println!("Usage: ratex [script/filepath]");
+        println!("Usage: ratex [script]");
     } else if args.len() == 2 {
-        let result = run_file(args[0].clone());
+        let result = run_file(
+            env::current_dir()
+                .unwrap()
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .to_owned()
+                + "/"
+                + &args[1].clone(),
+        );
         match result {
             Ok(()) => {
                 println!("Done!")

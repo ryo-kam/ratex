@@ -23,8 +23,8 @@ impl Error for RatexError {
 #[derive(Debug)]
 pub enum RatexErrorType {
     UnknownTokenError(u32, String),
-    ScanOutOfRangeError(u32),
-    UnterminatedString,
+    UnterminatedString(String),
+    UnterminatedBlockComment(String),
 }
 
 impl Display for RatexErrorType {
@@ -33,11 +33,11 @@ impl Display for RatexErrorType {
             Self::UnknownTokenError(line, token) => {
                 write!(f, "unknown token on line {}: {}", line, token)
             }
-            Self::ScanOutOfRangeError(index) => {
-                write!(f, "tried to scan invalid index: {}", index)
+            Self::UnterminatedBlockComment(index) => {
+                write!(f, "unterminated block comment: {}", index)
             }
-            Self::UnterminatedString => {
-                write!(f, "unterminated string")
+            Self::UnterminatedString(string) => {
+                write!(f, "unterminated string: {}", string)
             }
         }
     }

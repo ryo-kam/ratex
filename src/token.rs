@@ -24,7 +24,7 @@ impl Display for RatexToken {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RatexTokenType {
     // Single-character tokens.
     LeftParen,
