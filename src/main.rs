@@ -3,16 +3,38 @@ use std::{
     io::{self, Write},
 };
 
+mod ast;
 mod error;
 mod scanner;
 mod token;
 
+use ast::{AstPrinter, Expr};
 use error::RatexErrorType;
 use scanner::Scanner;
+use token::RatexToken;
 
 use crate::error::RatexError;
 
 fn main() {
+    // let expr: Expr = Expr::Grouping(Box::new(ast::Grouping {
+    //     expr: Box::new(Expr::Binary(Box::new(ast::Binary {
+    //         operator: RatexToken {
+    //             token: token::RatexTokenType::BangEqual,
+    //             lexeme: "!=".to_owned(),
+    //             line: 0,
+    //         },
+    //         left: Box::new(Expr::Literal(Box::new(ast::Literal {
+    //             value: ast::LiteralValue::Number(0.123),
+    //         }))),
+    //         right: Box::new(Expr::Literal(Box::new(ast::Literal {
+    //             value: ast::LiteralValue::String("Hello".to_owned()),
+    //         }))),
+    //     }))),
+    // }));
+
+    // let mut printer = AstPrinter {};
+    // println!("{}", printer.print(expr));
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 2 {
