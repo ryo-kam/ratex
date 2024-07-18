@@ -1,1 +1,2 @@
--5 + 2 * 5 //15
+print "hello";
+print 1+3;

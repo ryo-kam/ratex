@@ -1,22 +1,14 @@
 use paste;
 
 macro_rules! ast_derive {
-    ($($type: ident ($($prop: ident : $class: ty),+)),+) => {
+    ($name: ident, $($type: ident ($($prop: ident : $class: ty),+)),+) => {
         paste::paste! {
             #[derive(Clone)]
-            pub enum Expr {
+            pub enum $name {
                 Empty,
                 $(
                     $type(Box<$type>)
                 ),+
-            }
-
-            #[derive(Clone, Debug)]
-            pub enum LiteralValue {
-                Bool(bool),
-                String(String),
-                Number(f64),
-                Nil,
             }
 
             $(
@@ -28,34 +20,34 @@ macro_rules! ast_derive {
                 }
             )+
 
-            pub trait AstVisitor<R> {
+            pub trait [<$name Visitor>]<R> {
                 $(
                         fn [<visit_ $type:snake>] (&mut self, target: &$type) -> R;
 
                 )+
             }
 
-            pub trait Accept<R> {
-                fn accept<V: AstVisitor<R>>(&self, visitor: &mut V) -> R;
+            pub trait [<$name Accept>]<R> {
+                fn accept<V: [<$name Visitor>]<R>>(&self, visitor: &mut V) -> R;
             }
 
-            impl<R> Accept<R> for Expr {
-                fn accept<V: AstVisitor<R>>(&self, visitor: &mut V) -> R {
+            impl<R> [<$name Accept>]<R> for $name {
+                fn accept<V: [<$name Visitor>]<R>>(&self, visitor: &mut V) -> R {
                     match self {
-                        Expr::Empty => {
+                        $name::Empty => {
                             panic!("Cannot visit empty");
                         }
 
                         $(
-                            Expr::$type(x) => visitor.[<visit_ $type:snake>](x)
+                            $name::$type(x) => visitor.[<visit_ $type:snake>](x)
                         ),+
                     }
                 }
             }
 
             $(
-                impl<R> Accept<R> for $type {
-                    fn accept<V: AstVisitor<R>>(&self, visitor: &mut V) -> R {
+                impl<R> [<$name Accept>]<R> for $type {
+                    fn accept<V: [<$name Visitor>]<R>>(&self, visitor: &mut V) -> R {
                         visitor.[<visit_ $type:snake>](self)
                     }
                 }

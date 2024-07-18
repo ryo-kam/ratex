@@ -10,8 +10,6 @@ mod parser;
 mod scanner;
 mod token;
 
-use ast::AstPrinter;
-use error::RatexErrorType;
 use interpreter::RatexInterpreter;
 use parser::Parser;
 use scanner::Scanner;
@@ -91,7 +89,7 @@ fn run(code: String) -> Result<(), RatexError> {
     let ast = parser.parse().unwrap();
 
     let mut interpreter = RatexInterpreter {};
-    println!("{:?}", interpreter.evaluate(ast));
+    interpreter.interpret(ast);
 
     Ok(())
 }

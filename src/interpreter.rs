@@ -1,14 +1,28 @@
-use crate::ast::{Accept, AstVisitor, Binary, Expr, Grouping, Literal, LiteralValue, Unary};
+use crate::ast::{
+    Binary, Expr, ExprAccept, ExprVisitor, Expression, Grouping, Literal, LiteralValue, Print,
+    Stmt, StmtAccept, StmtVisitor, Unary,
+};
 use crate::token::{RatexToken as RXT, RatexTokenType as RXTT};
 
 pub struct RatexInterpreter {}
+
 impl RatexInterpreter {
     pub fn evaluate(&mut self, expr: Expr) -> LiteralValue {
         expr.accept(self)
     }
+
+    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+        for statement in statements {
+            self.execute(statement);
+        }
+    }
+
+    pub fn execute(&mut self, statement: Stmt) {
+        statement.accept(self);
+    }
 }
 
-impl AstVisitor<LiteralValue> for RatexInterpreter {
+impl ExprVisitor<LiteralValue> for RatexInterpreter {
     fn visit_binary(&mut self, target: &Binary) -> LiteralValue {
         let left: LiteralValue = self.evaluate(*target.left.clone());
         let right: LiteralValue = self.evaluate(*target.right.clone());
@@ -70,5 +84,17 @@ impl AstVisitor<LiteralValue> for RatexInterpreter {
 
     fn visit_grouping(&mut self, target: &Grouping) -> LiteralValue {
         todo!()
+    }
+}
+
+impl StmtVisitor<()> for RatexInterpreter {
+    fn visit_expression(&mut self, target: &Expression) {
+        self.evaluate(*target.expr.clone());
+    }
+
+    fn visit_print(&mut self, target: &Print) {
+        let value = self.evaluate(*target.expr.clone());
+
+        println!("{value}");
     }
 }
