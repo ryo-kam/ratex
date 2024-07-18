@@ -22,12 +22,10 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, RatexError> {
-        println!("expr");
         self.equality()
     }
 
     fn equality(&mut self) -> Result<Expr, RatexError> {
-        println!("equal");
         let mut expr = self.comparison();
 
         while self.match_token(vec![RXTT::BangEqual, RXTT::EqualEqual]) {
@@ -142,7 +140,8 @@ impl Parser {
                 }));
             }
             RXTT::LeftParen => {
-                let expr = self.expression().unwrap();
+                self.current += 1;
+                let expr: Expr = self.expression().unwrap();
 
                 while !self.is_at_end() && self.peek().token != RXTT::RightParen {
                     self.current += 1;
@@ -156,10 +155,11 @@ impl Parser {
                     expr: Box::new(expr),
                 }));
             }
-            _ => {}
+            _ => {
+                self.current += 1;
+                return Expr::Empty;
+            }
         }
-
-        return Expr::Empty;
     }
 
     fn match_token(&mut self, vec: Vec<RXTT>) -> bool {

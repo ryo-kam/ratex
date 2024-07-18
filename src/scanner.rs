@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::Peekable, str::Chars};
+use std::{collections::HashMap, fmt::format, iter::Peekable, str::Chars};
 
 use crate::{
     error::{RatexError, RatexErrorType},
@@ -59,7 +59,7 @@ impl<'a> Scanner<'a> {
 
         self.tokens.push(RatexToken {
             token: RatexTokenType::EOF,
-            lexeme: "".to_string(),
+            lexeme: "EOF".to_string(),
             line: self.line,
         });
         Ok(())
@@ -178,7 +178,7 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, token: RatexTokenType) {
-        let text = "".to_owned();
+        let text = format!("{}", token.to_string());
 
         self.tokens.push(RatexToken {
             token,
