@@ -1,5 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
+#[derive(Clone)]
 pub struct RatexToken {
     pub token: RatexTokenType,
     pub lexeme: String,
@@ -24,7 +25,7 @@ impl Display for RatexToken {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum RatexTokenType {
     // Single-character tokens.
     LeftParen,

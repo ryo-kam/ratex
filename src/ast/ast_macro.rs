@@ -11,6 +11,7 @@ macro_rules! ast_derive {
             }
 
             pub enum LiteralValue {
+                Bool(bool),
                 String(String),
                 Number(f64),
                 Nil,

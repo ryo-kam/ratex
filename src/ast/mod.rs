@@ -40,6 +40,13 @@ impl AstVisitor<String> for AstPrinter {
     }
     fn visit_literal(&mut self, expr: &Literal) -> String {
         match &expr.value {
+            LiteralValue::Bool(b) => {
+                if *b {
+                    "true".to_string()
+                } else {
+                    "false".to_string()
+                }
+            }
             LiteralValue::String(s) => s.clone(),
             LiteralValue::Number(n) => n.to_string(),
             LiteralValue::Nil => "nil".to_owned(),

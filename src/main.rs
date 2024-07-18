@@ -5,36 +5,18 @@ use std::{
 
 mod ast;
 mod error;
+mod parser;
 mod scanner;
 mod token;
 
-use ast::{AstPrinter, Expr};
+use ast::AstPrinter;
 use error::RatexErrorType;
+use parser::Parser;
 use scanner::Scanner;
-use token::RatexToken;
 
 use crate::error::RatexError;
 
 fn main() {
-    // let expr: Expr = Expr::Grouping(Box::new(ast::Grouping {
-    //     expr: Box::new(Expr::Binary(Box::new(ast::Binary {
-    //         operator: RatexToken {
-    //             token: token::RatexTokenType::BangEqual,
-    //             lexeme: "!=".to_owned(),
-    //             line: 0,
-    //         },
-    //         left: Box::new(Expr::Literal(Box::new(ast::Literal {
-    //             value: ast::LiteralValue::Number(0.123),
-    //         }))),
-    //         right: Box::new(Expr::Literal(Box::new(ast::Literal {
-    //             value: ast::LiteralValue::String("Hello".to_owned()),
-    //         }))),
-    //     }))),
-    // }));
-
-    // let mut printer = AstPrinter {};
-    // println!("{}", printer.print(expr));
-
     let args: Vec<String> = env::args().collect();
 
     if args.len() > 2 {
@@ -98,19 +80,32 @@ fn run_prompt() -> Result<(), RatexError> {
 fn run(code: String) -> Result<(), RatexError> {
     let mut scanner = Scanner::new(code.as_str());
 
-    if code == "exit" {
-        return Err(RatexError {
-            source: RatexErrorType::UnknownTokenError(0, "exit".to_owned()),
-        });
-    } else {
-        scanner.scan_tokens()?;
+    scanner.scan_tokens()?;
 
-        let tokens = scanner.tokens;
+    let tokens = scanner.tokens;
 
-        for token in tokens {
-            println!("{token}");
-        }
-    }
+    let mut parser = Parser::new(tokens);
+
+    let ast = parser.parse().unwrap();
+
+    // let expr: Expr = Expr::Grouping(Box::new(ast::Grouping {
+    //     expr: Box::new(Expr::Binary(Box::new(ast::Binary {
+    //         operator: RatexToken {
+    //             token: token::RatexTokenType::BangEqual,
+    //             lexeme: "!=".to_owned(),
+    //             line: 0,
+    //         },
+    //         left: Box::new(Expr::Literal(Box::new(ast::Literal {
+    //             value: ast::LiteralValue::Number(0.123),
+    //         }))),
+    //         right: Box::new(Expr::Literal(Box::new(ast::Literal {
+    //             value: ast::LiteralValue::String("Hello".to_owned()),
+    //         }))),
+    //     }))),
+    // }));
+
+    let mut printer = AstPrinter {};
+    println!("{}", printer.print(ast));
 
     Ok(())
 }
