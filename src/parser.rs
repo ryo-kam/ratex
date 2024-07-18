@@ -1,6 +1,6 @@
 use crate::{
     ast::{Binary, Expr, Grouping, Literal, LiteralValue, Unary},
-    error::RatexError,
+    error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
 };
 
@@ -26,11 +26,11 @@ impl Parser {
     }
 
     fn equality(&mut self) -> Result<Expr, RatexError> {
-        let mut expr = self.comparison();
+        let mut expr = self.comparison()?;
 
         while self.match_token(vec![RXTT::BangEqual, RXTT::EqualEqual]) {
             let operator = self.previous().clone();
-            let right = self.comparison();
+            let right = self.comparison()?;
             expr = Expr::Binary(Box::new(Binary {
                 left: Box::new(expr),
                 operator,
@@ -41,8 +41,8 @@ impl Parser {
         Ok(expr)
     }
 
-    fn comparison(&mut self) -> Expr {
-        let mut expr = self.term();
+    fn comparison(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.term()?;
 
         while self.match_token(vec![
             RXTT::Greater,
@@ -51,7 +51,7 @@ impl Parser {
             RXTT::LessEqual,
         ]) {
             let operator = self.previous().clone();
-            let right = self.term();
+            let right = self.term()?;
             expr = Expr::Binary(Box::new(Binary {
                 left: Box::new(expr),
                 operator,
@@ -59,15 +59,15 @@ impl Parser {
             }));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn term(&mut self) -> Expr {
-        let mut expr = self.factor();
+    fn term(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.factor()?;
 
         while self.match_token(vec![RXTT::Minus, RXTT::Plus]) {
             let operator = self.previous().clone();
-            let right = self.factor();
+            let right = self.factor()?;
             expr = Expr::Binary(Box::new(Binary {
                 left: Box::new(expr),
                 operator,
@@ -75,15 +75,15 @@ impl Parser {
             }));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn factor(&mut self) -> Expr {
-        let mut expr = self.unary();
+    fn factor(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.unary()?;
 
         while self.match_token(vec![RXTT::Slash, RXTT::Star]) {
             let operator = self.previous().clone();
-            let right = self.unary();
+            let right = self.unary()?;
             expr = Expr::Binary(Box::new(Binary {
                 left: Box::new(expr),
                 operator,
@@ -91,74 +91,86 @@ impl Parser {
             }));
         }
 
-        expr
+        Ok(expr)
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, RatexError> {
         if self.match_token(vec![RXTT::Bang, RXTT::Minus]) {
             let operator = self.previous().clone();
-            let right = self.unary();
-            Expr::Unary(Box::new(Unary {
+            let right = self.unary()?;
+            Ok(Expr::Unary(Box::new(Unary {
                 operator,
                 right: Box::new(right),
-            }))
+            })))
         } else {
             self.primary()
         }
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Result<Expr, RatexError> {
         match &self.tokens.get(self.current).unwrap().token {
             RXTT::False => {
                 self.current += 1;
-                return Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Box::new(Literal {
                     value: LiteralValue::Bool(false),
-                }));
+                })))
             }
             RXTT::True => {
                 self.current += 1;
-                return Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Box::new(Literal {
                     value: LiteralValue::Bool(true),
-                }));
+                })))
             }
             RXTT::Nil => {
                 self.current += 1;
-                return Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Box::new(Literal {
                     value: LiteralValue::Nil,
-                }));
+                })))
             }
             RXTT::Number(n) => {
                 self.current += 1;
-                return Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Box::new(Literal {
                     value: LiteralValue::Number(n.clone()),
-                }));
+                })))
             }
             RXTT::String(s) => {
                 self.current += 1;
-                return Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Box::new(Literal {
                     value: LiteralValue::String(s.clone()),
-                }));
+                })))
             }
             RXTT::LeftParen => {
                 self.current += 1;
                 let expr: Expr = self.expression().unwrap();
 
-                while !self.is_at_end() && self.peek().token != RXTT::RightParen {
-                    self.current += 1;
+                let mut ind = self.current;
+
+                loop {
+                    match self.tokens.get(ind).unwrap().token {
+                        RXTT::RightParen => {
+                            break;
+                        }
+                        RXTT::EOF => {
+                            return Err(RatexError {
+                                source: RatexErrorType::UnterminatedParen(self.peek().line),
+                            });
+                        }
+                        _ => {
+                            ind += 1;
+                        }
+                    }
                 }
 
-                if self.is_at_end() {
-                    panic!("Expect ')' after expression.")
-                }
-
-                return Expr::Grouping(Box::new(Grouping {
+                Ok(Expr::Grouping(Box::new(Grouping {
                     expr: Box::new(expr),
-                }));
+                })))
             }
-            _ => {
-                self.current += 1;
-                return Expr::Empty;
-            }
+            _ => Err(RatexError {
+                source: RatexErrorType::UnexpectedToken(
+                    self.peek().line,
+                    format!("Unexpected token: {}", self.peek().lexeme),
+                ),
+            }),
         }
     }
 

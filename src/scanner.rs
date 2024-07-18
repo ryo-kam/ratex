@@ -160,7 +160,7 @@ impl<'a> Scanner<'a> {
             }
             _ => {
                 err = Some(RatexError {
-                    source: RatexErrorType::UnknownTokenError(self.line, c.to_string()),
+                    source: RatexErrorType::UnknownToken(self.line, c.to_string()),
                 })
             }
         }

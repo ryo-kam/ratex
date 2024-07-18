@@ -3,6 +3,7 @@ use paste;
 macro_rules! ast_derive {
     ($($type: ident ($($prop: ident : $class: ty),+)),+) => {
         paste::paste! {
+            #[derive(Clone)]
             pub enum Expr {
                 Empty,
                 $(
@@ -10,6 +11,7 @@ macro_rules! ast_derive {
                 ),+
             }
 
+            #[derive(Clone, Debug)]
             pub enum LiteralValue {
                 Bool(bool),
                 String(String),
@@ -18,6 +20,7 @@ macro_rules! ast_derive {
             }
 
             $(
+                #[derive(Clone)]
                 pub struct $type {
                     $(
                         pub $prop: $class

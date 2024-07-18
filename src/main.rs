@@ -5,12 +5,14 @@ use std::{
 
 mod ast;
 mod error;
+mod interpreter;
 mod parser;
 mod scanner;
 mod token;
 
 use ast::AstPrinter;
 use error::RatexErrorType;
+use interpreter::RatexInterpreter;
 use parser::Parser;
 use scanner::Scanner;
 
@@ -88,24 +90,8 @@ fn run(code: String) -> Result<(), RatexError> {
 
     let ast = parser.parse().unwrap();
 
-    // let expr: Expr = Expr::Grouping(Box::new(ast::Grouping {
-    //     expr: Box::new(Expr::Binary(Box::new(ast::Binary {
-    //         operator: RatexToken {
-    //             token: token::RatexTokenType::BangEqual,
-    //             lexeme: "!=".to_owned(),
-    //             line: 0,
-    //         },
-    //         left: Box::new(Expr::Literal(Box::new(ast::Literal {
-    //             value: ast::LiteralValue::Number(0.123),
-    //         }))),
-    //         right: Box::new(Expr::Literal(Box::new(ast::Literal {
-    //             value: ast::LiteralValue::String("Hello".to_owned()),
-    //         }))),
-    //     }))),
-    // }));
-
-    let mut printer = AstPrinter {};
-    println!("{}", printer.print(ast));
+    let mut interpreter = RatexInterpreter {};
+    println!("{:?}", interpreter.evaluate(ast));
 
     Ok(())
 }
