@@ -23,33 +23,41 @@ impl Error for RatexError {
 #[derive(Debug)]
 pub enum RatexErrorType {
     UnknownToken(u32, String),
-    UnterminatedString(String),
-    UnterminatedBlockComment(String),
+    UnterminatedString(u32, String),
+    UnterminatedBlockComment(u32, String),
     UnexpectedToken(u32, String),
-    ExpectedToken(String),
+    ExpectedToken(u32, String),
     UndefinedIdentifier(String),
+    InvalidAssignment(u32),
 }
 
 impl Display for RatexErrorType {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
             Self::UnknownToken(line, token) => {
-                write!(f, "unknown token on line {}: {}", line, token)
+                write!(f, "line {}, unknown token {}", line, token)
             }
-            Self::UnterminatedBlockComment(index) => {
-                write!(f, "unterminated block comment: {}", index)
+            Self::UnterminatedBlockComment(line, index) => {
+                write!(f, "line {}, unterminated block comment: {}", line, index)
             }
-            Self::UnterminatedString(string) => {
-                write!(f, "unterminated string: {}", string)
+            Self::UnterminatedString(line, string) => {
+                write!(f, "line {}, unterminated string: {}", line, string)
             }
             Self::UnexpectedToken(line, token) => {
-                write!(f, "unexpected token on line {}: {}", line, token)
+                write!(f, "line {}, unexpected token '{}'", line, token)
             }
-            Self::ExpectedToken(string) => {
-                write!(f, "expected token '{}' but not found", string)
+            Self::ExpectedToken(line, string) => {
+                write!(
+                    f,
+                    "line {}, expected token '{}' but not found",
+                    line, string
+                )
             }
             Self::UndefinedIdentifier(identifier) => {
-                write!(f, "tried to access undefined identifier '{}'", identifier)
+                write!(f, "tried to read undefined variable '{}'", identifier)
+            }
+            Self::InvalidAssignment(line) => {
+                write!(f, "line {}, invalid assignment", line)
             }
         }
     }

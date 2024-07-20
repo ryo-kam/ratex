@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::ast::ast_macro::ast_derive;
 use crate::token::RatexToken;
+use crate::RatexError;
 
 mod ast_macro;
 
@@ -22,11 +23,13 @@ ast_derive! {
     Unary(operator: RatexToken, right: Box<Expr>),
     Literal(value: LiteralValue),
     Grouping(expr: Box<Expr>),
-    Variable(name: RatexToken)
+    Variable(name: RatexToken),
+    Assign(name: RatexToken, value: Box<Expr>)
 }
 
 ast_derive! {
     Stmt,
+    Block(statements: Vec<Stmt>),
     Expression(expr: Box<Expr>),
     Print(expr: Box<Expr>),
     Var(name: RatexToken, initialiser: Box<Expr>)

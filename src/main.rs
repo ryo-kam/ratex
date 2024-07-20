@@ -11,6 +11,7 @@ mod parser;
 mod scanner;
 mod token;
 
+use ast::Stmt;
 use interpreter::RatexInterpreter;
 use parser::Parser;
 use scanner::Scanner;
@@ -80,7 +81,7 @@ fn run(code: String) {
 
     let mut parser = Parser::new(tokens);
 
-    let ast = parser.parse();
+    let ast: Vec<Stmt> = parser.parse();
 
     if parser.has_error() {
         println!("Code won't be executed since it has errors.");

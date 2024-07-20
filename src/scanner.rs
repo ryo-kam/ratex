@@ -140,7 +140,7 @@ impl<'a> Scanner<'a> {
 
                     if !terminated {
                         return Err(RatexError {
-                            source: RatexErrorType::UnterminatedBlockComment(value),
+                            source: RatexErrorType::UnterminatedBlockComment(self.line, value),
                         });
                     }
                 } else {
@@ -177,7 +177,11 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, token: RatexTokenType) {
-        let text = format!("{}", token.to_string());
+        let text = self
+            .source
+            .get(self.start..self.current)
+            .unwrap()
+            .to_owned();
 
         self.tokens.push(RatexToken {
             token,
@@ -202,6 +206,8 @@ impl<'a> Scanner<'a> {
     }
 
     fn scan_string(&mut self) -> Result<(), RatexError> {
+        let start_line = self.line;
+
         while !self.is_at_end() && *self.chars.peek().unwrap() != '"' {
             if *self.chars.peek().unwrap() == '\n' {
                 self.line += 1;
@@ -212,6 +218,7 @@ impl<'a> Scanner<'a> {
         if self.is_at_end() {
             return Err(RatexError {
                 source: RatexErrorType::UnterminatedString(
+                    start_line,
                     self.source
                         .get(self.start..self.current - 1)
                         .unwrap()

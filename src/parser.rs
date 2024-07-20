@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Binary, Expr, Expression, Grouping, Literal, LiteralValue, Print, Stmt, Unary, Var,
-        Variable,
+        Assign, Binary, Block, Expr, Expression, Grouping, Literal, LiteralValue, Print, Stmt,
+        Unary, Var, Variable,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -18,7 +18,7 @@ impl Parser {
         Parser {
             tokens: input,
             current: 0,
-            has_error: true,
+            has_error: false,
         }
     }
 
@@ -46,7 +46,7 @@ impl Parser {
     }
 
     fn expression(&mut self) -> Result<Expr, RatexError> {
-        self.equality()
+        self.assignment()
     }
 
     fn equality(&mut self) -> Result<Expr, RatexError> {
@@ -182,7 +182,7 @@ impl Parser {
             _ => Err(RatexError {
                 source: RatexErrorType::UnexpectedToken(
                     self.peek().line,
-                    format!("Unexpected token: {}", self.peek().lexeme),
+                    format!("{}", self.peek().lexeme),
                 ),
             }),
         }
@@ -227,7 +227,7 @@ impl Parser {
         }
 
         Err(RatexError {
-            source: RatexErrorType::ExpectedToken(format!("{}", token_type)),
+            source: RatexErrorType::ExpectedToken(self.previous().line, ";".to_owned()),
         })
     }
 
@@ -238,6 +238,12 @@ impl Parser {
     fn statement(&mut self) -> Result<Stmt, RatexError> {
         if self.match_token(vec![RXTT::Print]) {
             return self.print_statement();
+        }
+
+        if self.match_token(vec![RXTT::LeftBrace]) {
+            return Ok(Stmt::Block(Block {
+                statements: self.block()?,
+            }));
         }
 
         self.expression_statement()
@@ -322,5 +328,43 @@ impl Parser {
 
             self.advance();
         }
+    }
+
+    fn assignment(&mut self) -> Result<Expr, RatexError> {
+        let expr = self.equality()?;
+
+        if self.match_token(vec![RXTT::Equal]) {
+            let equals = self.previous();
+
+            match expr {
+                Expr::Variable(var) => {
+                    let name = var.name;
+                    let value = self.assignment()?;
+                    return Ok(Expr::Assign(Assign {
+                        name,
+                        value: Box::new(value),
+                    }));
+                }
+                _ => {
+                    return Err(RatexError {
+                        source: RatexErrorType::InvalidAssignment(equals.line),
+                    });
+                }
+            }
+        }
+
+        Ok(expr)
+    }
+
+    fn block(&mut self) -> Result<Vec<Stmt>, RatexError> {
+        let mut statements = Vec::new();
+
+        while !self.check(&RXTT::RightBrace) && !self.is_at_end() {
+            statements.push(self.declaration()?);
+        }
+
+        self.consume(RXTT::RightBrace)?;
+
+        Ok(statements)
     }
 }
