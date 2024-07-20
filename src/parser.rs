@@ -10,6 +10,7 @@ use crate::{
 pub struct Parser {
     tokens: Vec<RXT>,
     current: usize,
+    has_error: bool,
 }
 
 impl Parser {
@@ -17,17 +18,31 @@ impl Parser {
         Parser {
             tokens: input,
             current: 0,
+            has_error: true,
         }
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Stmt>, RatexError> {
+    pub fn has_error(&self) -> bool {
+        self.has_error
+    }
+
+    pub fn parse(&mut self) -> Vec<Stmt> {
         let mut statements: Vec<Stmt> = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.declaration());
+            match self.declaration() {
+                Ok(stmt) => {
+                    statements.push(stmt);
+                }
+                Err(e) => {
+                    println!("Error: {}", e);
+                    self.has_error = true;
+                    self.synchronise();
+                }
+            }
         }
 
-        Ok(statements)
+        statements
     }
 
     fn expression(&mut self) -> Result<Expr, RatexError> {
@@ -150,12 +165,9 @@ impl Parser {
             }
             RXTT::LeftParen => {
                 self.current += 1;
-                let expr: Expr = self.expression().unwrap();
+                let expr: Expr = self.expression()?;
 
-                self.consume(
-                    RXTT::RightParen,
-                    "Expected ')' after parenthesis.".to_string(),
-                );
+                self.consume(RXTT::RightParen)?;
 
                 Ok(Expr::Grouping(Grouping {
                     expr: Box::new(expr),
@@ -178,7 +190,7 @@ impl Parser {
 
     fn match_token(&mut self, vec: Vec<RXTT>) -> bool {
         for token_type in vec {
-            if self.check(token_type) {
+            if self.check(&token_type) {
                 self.advance();
                 return true;
             }
@@ -190,12 +202,12 @@ impl Parser {
         self.tokens.get(self.current - 1).unwrap()
     }
 
-    fn check(&self, token_type: RXTT) -> bool {
+    fn check(&self, token_type: &RXTT) -> bool {
         if self.is_at_end() {
             return false;
         }
 
-        self.peek().token == token_type
+        self.peek().token == *token_type
     }
 
     fn advance(&mut self) -> &RXT {
@@ -209,19 +221,21 @@ impl Parser {
         self.tokens.get(self.current).unwrap()
     }
 
-    fn consume(&mut self, token_type: RXTT, error: String) -> &RXT {
-        if self.check(token_type) {
-            return self.advance();
-        } else {
-            panic!("{error}")
+    fn consume(&mut self, token_type: RXTT) -> Result<&RXT, RatexError> {
+        if self.check(&token_type) {
+            return Ok(self.advance());
         }
+
+        Err(RatexError {
+            source: RatexErrorType::ExpectedToken(format!("{}", token_type)),
+        })
     }
 
     fn is_at_end(&self) -> bool {
         self.peek().token == RXTT::EOF
     }
 
-    fn statement(&mut self) -> Stmt {
+    fn statement(&mut self) -> Result<Stmt, RatexError> {
         if self.match_token(vec![RXTT::Print]) {
             return self.print_statement();
         }
@@ -229,35 +243,35 @@ impl Parser {
         self.expression_statement()
     }
 
-    fn print_statement(&mut self) -> Stmt {
-        let value = self.expression().unwrap();
+    fn print_statement(&mut self) -> Result<Stmt, RatexError> {
+        let value = self.expression()?;
 
-        self.consume(RXTT::Semicolon, "Expected ';' after value.".to_string());
+        self.consume(RXTT::Semicolon)?;
 
-        return Stmt::Print(Print {
+        Ok(Stmt::Print(Print {
             expr: Box::new(value),
-        });
+        }))
     }
 
-    fn expression_statement(&mut self) -> Stmt {
-        let value = self.expression().unwrap();
+    fn expression_statement(&mut self) -> Result<Stmt, RatexError> {
+        let value = self.expression()?;
 
-        self.consume(RXTT::Semicolon, "Expected ';' after value.".to_string());
+        self.consume(RXTT::Semicolon)?;
 
-        return Stmt::Expression(Expression {
+        Ok(Stmt::Expression(Expression {
             expr: Box::new(value),
-        });
+        }))
     }
 
-    fn declaration(&mut self) -> Stmt {
+    fn declaration(&mut self) -> Result<Stmt, RatexError> {
         if self.match_token(vec![RXTT::Var]) {
-            return self.var_declaration();
+            Ok(self.var_declaration()?)
         } else {
-            return self.statement();
+            Ok(self.statement()?)
         }
     }
 
-    fn var_declaration(&mut self) -> Stmt {
+    fn var_declaration(&mut self) -> Result<Stmt, RatexError> {
         let name = match &self.peek().token {
             RXTT::Identifier(s) => RXT {
                 token: RXTT::Identifier(s.clone()),
@@ -274,17 +288,39 @@ impl Parser {
         let mut initialiser: Expr = Expr::Empty;
 
         if self.match_token(vec![RXTT::Equal]) {
-            initialiser = self.expression().unwrap();
+            initialiser = self.expression()?;
         }
 
-        self.consume(
-            RXTT::Semicolon,
-            "Expected ';' after variable declaration".to_owned(),
-        );
+        self.consume(RXTT::Semicolon)?;
 
-        return Stmt::Var(Var {
+        Ok(Stmt::Var(Var {
             name,
             initialiser: Box::new(initialiser),
-        });
+        }))
+    }
+
+    fn synchronise(&mut self) {
+        self.advance();
+
+        while !self.is_at_end() {
+            match self.previous().token {
+                RXTT::Semicolon => return (),
+                _ => {}
+            }
+
+            match self.peek().token {
+                RXTT::Class
+                | RXTT::Fun
+                | RXTT::Var
+                | RXTT::For
+                | RXTT::If
+                | RXTT::While
+                | RXTT::Print
+                | RXTT::Return => return (),
+                _ => {}
+            }
+
+            self.advance();
+        }
     }
 }

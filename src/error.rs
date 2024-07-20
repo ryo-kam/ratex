@@ -27,6 +27,8 @@ pub enum RatexErrorType {
     UnterminatedBlockComment(String),
     UnterminatedParen(u32),
     UnexpectedToken(u32, String),
+    ExpectedToken(String),
+    UndefinedIdentifier(String),
 }
 
 impl Display for RatexErrorType {
@@ -46,6 +48,12 @@ impl Display for RatexErrorType {
             }
             Self::UnterminatedParen(line) => {
                 write!(f, "unclosed parenthesis on line {}", line)
+            }
+            Self::ExpectedToken(string) => {
+                write!(f, "expected token '{}' but not found", string)
+            }
+            Self::UndefinedIdentifier(identifier) => {
+                write!(f, "tried to access undefined identifier '{}'", identifier)
             }
         }
     }

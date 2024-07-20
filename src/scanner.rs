@@ -46,7 +46,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) -> Result<(), RatexError> {
+    pub fn scan_tokens(&mut self) {
         while !self.is_at_end() {
             self.start = self.current;
             match self.scan_token() {
@@ -62,7 +62,6 @@ impl<'a> Scanner<'a> {
             lexeme: "EOF".to_string(),
             line: self.line,
         });
-        Ok(())
     }
 
     fn is_at_end(&self) -> bool {

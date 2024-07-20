@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use crate::ast::{
     Binary, Expr, ExprAccept, ExprVisitor, Expression, Grouping, Literal, LiteralValue, Print,
     Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable,
@@ -91,7 +89,7 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
 
     fn visit_variable(&mut self, target: &Variable) -> LiteralValue {
         match &target.name.token {
-            RXTT::Identifier(s) => return self.environment.get(s.to_string()).clone(),
+            RXTT::Identifier(s) => return self.environment.get(s.to_string()).unwrap().clone(),
             _ => panic!("Expected Identifier"),
         }
     }

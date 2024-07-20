@@ -23,7 +23,7 @@ fn main() {
     if args.len() > 2 {
         println!("Usage: ratex [script]");
     } else if args.len() == 2 {
-        let result = run_file(
+        run_file(
             env::current_dir()
                 .unwrap()
                 .into_os_string()
@@ -33,14 +33,7 @@ fn main() {
                 + "/"
                 + &args[1].clone(),
         );
-        match result {
-            Ok(()) => {
-                println!("Done!")
-            }
-            Err(e) => {
-                println!("Error: {e}");
-            }
-        }
+        println!("Done!")
     } else {
         let result = run_prompt();
         match result {
@@ -54,7 +47,7 @@ fn main() {
     }
 }
 
-fn run_file(path: String) -> Result<(), RatexError> {
+fn run_file(path: String) {
     let file = std::fs::read_to_string(path).unwrap();
     run(file)
 }
@@ -72,25 +65,27 @@ fn run_prompt() -> Result<(), RatexError> {
             break;
         };
 
-        run(prompt.trim().to_owned())?;
+        run(prompt.trim().to_owned());
     }
 
     Ok(())
 }
 
-fn run(code: String) -> Result<(), RatexError> {
+fn run(code: String) {
     let mut scanner = Scanner::new(code.as_str());
 
-    scanner.scan_tokens()?;
+    scanner.scan_tokens();
 
     let tokens = scanner.tokens;
 
     let mut parser = Parser::new(tokens);
 
-    let ast = parser.parse().unwrap();
+    let ast = parser.parse();
 
-    let mut interpreter = RatexInterpreter::new();
-    interpreter.interpret(ast);
-
-    Ok(())
+    if parser.has_error() {
+        println!("Code won't be executed since it has errors.");
+    } else {
+        let mut interpreter = RatexInterpreter::new();
+        interpreter.interpret(ast);
+    }
 }

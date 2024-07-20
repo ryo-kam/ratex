@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::ast::LiteralValue;
+use crate::{
+    ast::LiteralValue,
+    error::{RatexError, RatexErrorType},
+};
 
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
@@ -17,7 +20,12 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    pub fn get(&self, name: String) -> &LiteralValue {
-        return self.values.get(&name).unwrap();
+    pub fn get(&self, name: String) -> Result<&LiteralValue, RatexError> {
+        match self.values.get(&name) {
+            Some(value) => Ok(value),
+            None => Err(RatexError {
+                source: RatexErrorType::UndefinedIdentifier(name),
+            }),
+        }
     }
 }
