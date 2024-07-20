@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::format, iter::Peekable, str::Chars};
+use std::{collections::HashMap, iter::Peekable, str::Chars};
 
 use crate::{
     error::{RatexError, RatexErrorType},

@@ -3,7 +3,7 @@ use crate::ast::{
     Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable,
 };
 use crate::environment::Environment;
-use crate::token::{RatexToken as RXT, RatexTokenType as RXTT};
+use crate::token::RatexTokenType as RXTT;
 
 pub struct RatexInterpreter {
     environment: Environment,

@@ -1,4 +1,3 @@
-use paste;
 
 macro_rules! ast_derive {
     ($name: ident, $($type: ident ($($prop: ident : $class: ty),+)),+) => {
