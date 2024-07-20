@@ -8,7 +8,7 @@ use crate::{
 pub struct Scanner<'a> {
     source: &'a str,
     chars: Peekable<Chars<'a>>,
-    pub tokens: Vec<RatexToken>,
+    tokens: Vec<RatexToken>,
     start: usize,
     current: usize,
     line: u32,
@@ -46,7 +46,7 @@ impl<'a> Scanner<'a> {
         }
     }
 
-    pub fn scan_tokens(&mut self) {
+    pub fn scan_tokens(&mut self) -> Vec<RatexToken> {
         while !self.is_at_end() {
             self.start = self.current;
             match self.scan_token() {
@@ -62,6 +62,8 @@ impl<'a> Scanner<'a> {
             lexeme: "EOF".to_string(),
             line: self.line,
         });
+
+        self.tokens.clone()
     }
 
     fn is_at_end(&self) -> bool {

@@ -1,15 +1,13 @@
-use std::rc::Rc;
-
 use crate::ast::{
-    Assign, Binary, Block, Expr, ExprAccept, ExprVisitor, Expression, Grouping, Literal,
-    LiteralValue, Print, Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable,
+    Assign, Binary, Block, Expr, ExprAccept, ExprVisitor, Expression, Grouping, If, Literal,
+    LiteralValue, Logical, Print, Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable, While,
 };
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
 use crate::token::RatexTokenType as RXTT;
 
 pub struct RatexInterpreter {
-    environment: Rc<Environment>,
+    environment: Environment,
 }
 
 impl RatexInterpreter {
@@ -23,31 +21,27 @@ impl RatexInterpreter {
         expr.accept(self)
     }
 
-    pub fn interpret(&mut self, statements: Vec<Stmt>) {
+    pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RatexError> {
         for statement in statements {
             match self.execute(statement) {
                 Err(e) => {
-                    println!("Error: {e}");
-                    break;
+                    return Err(e);
                 }
                 _ => {}
             }
         }
+
+        Ok(())
     }
 
     pub fn execute(&mut self, statement: Stmt) -> Result<(), RatexError> {
         statement.accept(self)
     }
 
-    fn execute_block(
-        &mut self,
-        statements: Vec<Stmt>,
-        env: Rc<Environment>,
-    ) -> Result<(), RatexError> {
-        let previous = (*self.environment).clone();
+    fn execute_block(&mut self, statements: Vec<Stmt>) -> Result<(), RatexError> {
+        let previous = self.environment.clone();
 
-        dbg!(&env);
-        self.environment = env;
+        self.environment = Environment::new_child(previous);
 
         for statement in statements {
             match self.execute(statement) {
@@ -58,7 +52,9 @@ impl RatexInterpreter {
             }
         }
 
-        self.environment = Rc::new(previous.clone());
+        if let Some(parent) = self.environment.get_enclosing() {
+            self.environment = *parent;
+        }
 
         Ok(())
     }
@@ -139,10 +135,33 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
 
     fn visit_assign(&mut self, target: &Assign) -> Result<LiteralValue, RatexError> {
         let value = self.evaluate(target.value.clone())?;
-        Rc::get_mut(&mut self.environment)
-            .unwrap()
+        self.environment
             .assign(target.name.lexeme.clone(), value.clone())?;
         Ok(value)
+    }
+
+    fn visit_logical(&mut self, target: &Logical) -> Result<LiteralValue, RatexError> {
+        let left = self.evaluate(target.left.clone())?;
+
+        match target.operator.token {
+            RXTT::Or => {
+                if left.is_truthy() {
+                    return Ok(left);
+                } else {
+                    return Ok(self.evaluate(target.right.clone())?);
+                }
+            }
+            RXTT::And => {
+                if !left.is_truthy() {
+                    return Ok(left);
+                } else {
+                    return Ok(self.evaluate(target.right.clone())?);
+                }
+            }
+            _ => Err(RatexError {
+                source: RatexErrorType::InvalidLogicalOperation(target.operator.line),
+            }),
+        }
     }
 }
 
@@ -169,9 +188,7 @@ impl StmtVisitor<()> for RatexInterpreter {
         }
 
         match &target.name.token {
-            RXTT::Identifier(s) => Rc::get_mut(&mut self.environment)
-                .unwrap()
-                .define(s.to_string(), value),
+            RXTT::Identifier(s) => self.environment.define(s.to_string(), value),
             _ => {
                 return Err(RatexError {
                     source: RatexErrorType::ExpectedToken(
@@ -186,10 +203,27 @@ impl StmtVisitor<()> for RatexInterpreter {
     }
 
     fn visit_block(&mut self, target: &Block) -> Result<(), RatexError> {
-        self.execute_block(
-            target.statements.clone(),
-            Environment::new_child(Rc::clone(&self.environment)),
-        )?;
+        self.execute_block(target.statements.clone())?;
+
+        Ok(())
+    }
+
+    fn visit_if(&mut self, target: &If) -> Result<(), RatexError> {
+        if self.evaluate(target.condition.clone())?.is_truthy() {
+            self.execute(*target.then_stmt.clone())?
+        } else {
+            match *target.else_stmt {
+                Stmt::Empty => {}
+                _ => self.execute(*target.else_stmt.clone())?,
+            }
+        }
+        Ok(())
+    }
+
+    fn visit_while(&mut self, target: &While) -> Result<(), RatexError> {
+        while self.evaluate(target.condition.clone())?.is_truthy() {
+            self.execute(*target.body.clone())?
+        }
 
         Ok(())
     }

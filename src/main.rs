@@ -55,6 +55,7 @@ fn run_file(path: String) {
 
 fn run_prompt() -> Result<(), RatexError> {
     println!("Prompt mode");
+    let mut interpreter = RatexInterpreter::new();
 
     loop {
         let mut prompt = String::new();
@@ -66,18 +67,33 @@ fn run_prompt() -> Result<(), RatexError> {
             break;
         };
 
-        run(prompt.trim().to_owned());
+        let tokens = Scanner::new(prompt.as_str()).scan_tokens();
+
+        let mut parser = Parser::new(tokens);
+
+        let ast: Vec<Stmt> = parser.parse();
+
+        if !parser.has_error() {
+            for statement in ast {
+                match statement {
+                    Stmt::Expression(expr) => match interpreter.evaluate(expr.expr) {
+                        Ok(value) => println!("{}", value),
+                        Err(e) => println!("Error: {}", e),
+                    },
+                    _ => match interpreter.interpret(vec![statement]) {
+                        Ok(()) => {}
+                        Err(e) => println!("Error: {}", e),
+                    },
+                }
+            }
+        }
     }
 
     Ok(())
 }
 
 fn run(code: String) {
-    let mut scanner = Scanner::new(code.as_str());
-
-    scanner.scan_tokens();
-
-    let tokens = scanner.tokens;
+    let tokens = Scanner::new(code.as_str()).scan_tokens();
 
     let mut parser = Parser::new(tokens);
 
@@ -87,6 +103,9 @@ fn run(code: String) {
         println!("Code won't be executed since it has errors.");
     } else {
         let mut interpreter = RatexInterpreter::new();
-        interpreter.interpret(ast);
+        match interpreter.interpret(ast) {
+            Ok(()) => {}
+            Err(e) => println!("Error: {}", e),
+        }
     }
 }

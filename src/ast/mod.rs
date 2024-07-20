@@ -17,10 +17,22 @@ pub enum LiteralValue {
     Nil,
 }
 
+impl LiteralValue {
+    pub fn is_truthy(&self) -> bool {
+        match self {
+            LiteralValue::Bool(b) => return *b,
+            LiteralValue::String(s) => return s.len() > 0,
+            LiteralValue::Number(n) => return *n != 0.0,
+            LiteralValue::Nil => return false,
+        }
+    }
+}
+
 ast_derive! {
     Expr,
     Binary(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
     Unary(operator: RatexToken, right: Box<Expr>),
+    Logical(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
     Literal(value: LiteralValue),
     Grouping(expr: Box<Expr>),
     Variable(name: RatexToken),
@@ -31,6 +43,8 @@ ast_derive! {
     Stmt,
     Block(statements: Vec<Stmt>),
     Expression(expr: Box<Expr>),
+    If(condition: Box<Expr>, then_stmt: Box<Stmt>, else_stmt: Box<Stmt>),
+    While(condition: Box<Expr>, body: Box<Stmt>),
     Print(expr: Box<Expr>),
     Var(name: RatexToken, initialiser: Box<Expr>)
 }

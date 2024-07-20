@@ -29,6 +29,7 @@ pub enum RatexErrorType {
     ExpectedToken(u32, String),
     UndefinedIdentifier(String),
     InvalidAssignment(u32),
+    InvalidLogicalOperation(u32),
 }
 
 impl Display for RatexErrorType {
@@ -58,6 +59,9 @@ impl Display for RatexErrorType {
             }
             Self::InvalidAssignment(line) => {
                 write!(f, "line {}, invalid assignment", line)
+            }
+            Self::InvalidLogicalOperation(line) => {
+                write!(f, "line {}, invalid logical operation", line)
             }
         }
     }

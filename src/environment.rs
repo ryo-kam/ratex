@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use crate::{
     ast::LiteralValue,
@@ -8,26 +8,30 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Environment {
     values: HashMap<String, LiteralValue>,
-    enclosing: Option<Rc<Environment>>,
+    enclosing: Option<Box<Environment>>,
 }
 
 impl Environment {
-    pub fn new() -> Rc<Self> {
-        Rc::new(Environment {
+    pub fn new() -> Self {
+        Environment {
             values: HashMap::new(),
             enclosing: None,
-        })
+        }
     }
 
-    pub fn new_child(parent: Rc<Self>) -> Rc<Self> {
-        Rc::new(Environment {
+    pub fn new_child(parent: Self) -> Self {
+        Environment {
             values: HashMap::new(),
-            enclosing: Some(parent),
-        })
+            enclosing: Some(Box::new(parent)),
+        }
     }
 
     pub fn define(&mut self, name: String, value: LiteralValue) {
         self.values.insert(name, value);
+    }
+
+    pub fn get_enclosing(&self) -> Option<Box<Environment>> {
+        self.enclosing.clone()
     }
 
     pub fn get(&self, name: String) -> Result<&LiteralValue, RatexError> {
@@ -47,11 +51,19 @@ impl Environment {
     pub fn assign(&mut self, name: String, value: LiteralValue) -> Result<(), RatexError> {
         if self.values.contains_key(&name) {
             self.values.insert(name, value);
-            return Ok(());
+        } else {
+            match &mut self.enclosing {
+                Some(parent) => {
+                    return parent.assign(name, value);
+                }
+                None => {
+                    return Err(RatexError {
+                        source: RatexErrorType::UndefinedIdentifier(name),
+                    })
+                }
+            }
         }
 
-        Err(RatexError {
-            source: RatexErrorType::UndefinedIdentifier(name),
-        })
+        Ok(())
     }
 }

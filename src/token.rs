@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RatexToken {
     pub token: RatexTokenType,
     pub lexeme: String,

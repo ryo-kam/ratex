@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Expr, Expression, Grouping, Literal, LiteralValue, Print, Stmt,
-        Unary, Var, Variable,
+        Assign, Binary, Block, Expr, Expression, Grouping, If, Literal, LiteralValue, Logical,
+        Print, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -236,6 +236,14 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::While]) {
+            return self.while_statement();
+        }
+
+        if self.match_token(vec![RXTT::If]) {
+            return self.if_statement();
+        }
+
         if self.match_token(vec![RXTT::Print]) {
             return self.print_statement();
         }
@@ -331,7 +339,7 @@ impl Parser {
     }
 
     fn assignment(&mut self) -> Result<Expr, RatexError> {
-        let expr = self.equality()?;
+        let expr = self.or()?;
 
         if self.match_token(vec![RXTT::Equal]) {
             let equals = self.previous();
@@ -366,5 +374,72 @@ impl Parser {
         self.consume(RXTT::RightBrace)?;
 
         Ok(statements)
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, RatexError> {
+        self.consume(RXTT::LeftParen)?;
+        let condition = self.expression()?;
+        self.consume(RXTT::RightParen)?;
+
+        let then_stmt = self.statement()?;
+
+        let mut else_stmt = Stmt::Empty;
+
+        if self.match_token(vec![RXTT::Else]) {
+            else_stmt = self.statement()?;
+        }
+
+        Ok(Stmt::If(If {
+            condition: Box::new(condition),
+            then_stmt: Box::new(then_stmt),
+            else_stmt: Box::new(else_stmt),
+        }))
+    }
+
+    fn or(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.and()?;
+
+        while self.match_token(vec![RXTT::Or]) {
+            let operator = self.previous().clone();
+            let right = self.and()?;
+
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            });
+        }
+
+        Ok(expr)
+    }
+
+    fn and(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.equality()?;
+
+        while self.match_token(vec![RXTT::Or]) {
+            let operator = self.previous().clone();
+            let right = self.equality()?;
+
+            expr = Expr::Logical(Logical {
+                left: Box::new(expr),
+                operator,
+                right: Box::new(right),
+            })
+        }
+
+        Ok(expr)
+    }
+
+    fn while_statement(&mut self) -> Result<Stmt, RatexError> {
+        self.consume(RXTT::LeftParen)?;
+        let condition = self.expression()?;
+        self.consume(RXTT::RightParen)?;
+
+        let body = self.statement()?;
+
+        Ok(Stmt::While(While {
+            condition: Box::new(condition),
+            body: Box::new(body),
+        }))
     }
 }
