@@ -1,12 +1,23 @@
+use std::collections::HashMap;
+
 use crate::ast::{
     Binary, Expr, ExprAccept, ExprVisitor, Expression, Grouping, Literal, LiteralValue, Print,
-    Stmt, StmtAccept, StmtVisitor, Unary,
+    Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable,
 };
+use crate::environment::Environment;
 use crate::token::{RatexToken as RXT, RatexTokenType as RXTT};
 
-pub struct RatexInterpreter {}
+pub struct RatexInterpreter {
+    environment: Environment,
+}
 
 impl RatexInterpreter {
+    pub fn new() -> Self {
+        RatexInterpreter {
+            environment: Environment::new(),
+        }
+    }
+
     pub fn evaluate(&mut self, expr: Expr) -> LiteralValue {
         expr.accept(self)
     }
@@ -78,12 +89,19 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
         }
     }
 
+    fn visit_variable(&mut self, target: &Variable) -> LiteralValue {
+        match &target.name.token {
+            RXTT::Identifier(s) => return self.environment.get(s.to_string()).clone(),
+            _ => panic!("Expected Identifier"),
+        }
+    }
+
     fn visit_literal(&mut self, target: &Literal) -> LiteralValue {
         target.value.clone()
     }
 
     fn visit_grouping(&mut self, target: &Grouping) -> LiteralValue {
-        todo!()
+        self.evaluate(*target.expr.clone())
     }
 }
 
@@ -96,5 +114,21 @@ impl StmtVisitor<()> for RatexInterpreter {
         let value = self.evaluate(*target.expr.clone());
 
         println!("{value}");
+    }
+
+    fn visit_var(&mut self, target: &Var) {
+        let mut value = LiteralValue::Nil;
+
+        match *target.initialiser {
+            Expr::Empty => {}
+            _ => {
+                value = self.evaluate(*target.initialiser.clone());
+            }
+        }
+
+        match &target.name.token {
+            RXTT::Identifier(s) => self.environment.define(s.to_string(), value),
+            _ => panic!("Expected Identifier"),
+        }
     }
 }

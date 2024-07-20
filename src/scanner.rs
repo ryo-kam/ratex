@@ -279,7 +279,7 @@ impl<'a> Scanner<'a> {
 
         let token_type = match self.hash_map.get(value) {
             Some(token) => token.clone(),
-            None => RatexTokenType::Identifier,
+            None => RatexTokenType::Identifier(value.to_owned()),
         };
 
         self.add_token(token_type);

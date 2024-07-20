@@ -21,13 +21,15 @@ ast_derive! {
     Binary(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
     Unary(operator: RatexToken, right: Box<Expr>),
     Literal(value: LiteralValue),
-    Grouping(expr: Box<Expr>)
+    Grouping(expr: Box<Expr>),
+    Variable(name: RatexToken)
 }
 
 ast_derive! {
     Stmt,
     Expression(expr: Box<Expr>),
-    Print(expr: Box<Expr>)
+    Print(expr: Box<Expr>),
+    Var(name: RatexToken, initialiser: Box<Expr>)
 }
 
 impl Display for LiteralValue {

@@ -1,5 +1,8 @@
 use crate::{
-    ast::{Binary, Expr, Expression, Grouping, Literal, LiteralValue, Print, Stmt, Unary},
+    ast::{
+        Binary, Expr, Expression, Grouping, Literal, LiteralValue, Print, Stmt, Unary, Var,
+        Variable,
+    },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
 };
@@ -21,7 +24,7 @@ impl Parser {
         let mut statements: Vec<Stmt> = Vec::new();
 
         while !self.is_at_end() {
-            statements.push(self.statement());
+            statements.push(self.declaration());
         }
 
         Ok(statements)
@@ -37,11 +40,11 @@ impl Parser {
         while self.match_token(vec![RXTT::BangEqual, RXTT::EqualEqual]) {
             let operator = self.previous().clone();
             let right = self.comparison()?;
-            expr = Expr::Binary(Box::new(Binary {
+            expr = Expr::Binary(Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            }));
+            });
         }
 
         Ok(expr)
@@ -58,11 +61,11 @@ impl Parser {
         ]) {
             let operator = self.previous().clone();
             let right = self.term()?;
-            expr = Expr::Binary(Box::new(Binary {
+            expr = Expr::Binary(Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            }));
+            });
         }
 
         Ok(expr)
@@ -74,11 +77,11 @@ impl Parser {
         while self.match_token(vec![RXTT::Minus, RXTT::Plus]) {
             let operator = self.previous().clone();
             let right = self.factor()?;
-            expr = Expr::Binary(Box::new(Binary {
+            expr = Expr::Binary(Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            }));
+            });
         }
 
         Ok(expr)
@@ -90,11 +93,11 @@ impl Parser {
         while self.match_token(vec![RXTT::Slash, RXTT::Star]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
-            expr = Expr::Binary(Box::new(Binary {
+            expr = Expr::Binary(Binary {
                 left: Box::new(expr),
                 operator,
                 right: Box::new(right),
-            }));
+            });
         }
 
         Ok(expr)
@@ -104,10 +107,10 @@ impl Parser {
         if self.match_token(vec![RXTT::Bang, RXTT::Minus]) {
             let operator = self.previous().clone();
             let right = self.unary()?;
-            Ok(Expr::Unary(Box::new(Unary {
+            Ok(Expr::Unary(Unary {
                 operator,
                 right: Box::new(right),
-            })))
+            }))
         } else {
             self.primary()
         }
@@ -117,33 +120,33 @@ impl Parser {
         match &self.tokens.get(self.current).unwrap().token {
             RXTT::False => {
                 self.current += 1;
-                Ok(Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Literal {
                     value: LiteralValue::Bool(false),
-                })))
+                }))
             }
             RXTT::True => {
                 self.current += 1;
-                Ok(Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Literal {
                     value: LiteralValue::Bool(true),
-                })))
+                }))
             }
             RXTT::Nil => {
                 self.current += 1;
-                Ok(Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Literal {
                     value: LiteralValue::Nil,
-                })))
+                }))
             }
             RXTT::Number(n) => {
                 self.current += 1;
-                Ok(Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Literal {
                     value: LiteralValue::Number(n.clone()),
-                })))
+                }))
             }
             RXTT::String(s) => {
                 self.current += 1;
-                Ok(Expr::Literal(Box::new(Literal {
+                Ok(Expr::Literal(Literal {
                     value: LiteralValue::String(s.clone()),
-                })))
+                }))
             }
             RXTT::LeftParen => {
                 self.current += 1;
@@ -154,9 +157,15 @@ impl Parser {
                     "Expected ')' after parenthesis.".to_string(),
                 );
 
-                Ok(Expr::Grouping(Box::new(Grouping {
+                Ok(Expr::Grouping(Grouping {
                     expr: Box::new(expr),
-                })))
+                }))
+            }
+            RXTT::Identifier(_) => {
+                self.current += 1;
+                Ok(Expr::Variable(Variable {
+                    name: self.previous().clone(),
+                }))
             }
             _ => Err(RatexError {
                 source: RatexErrorType::UnexpectedToken(
@@ -200,9 +209,9 @@ impl Parser {
         self.tokens.get(self.current).unwrap()
     }
 
-    fn consume(&mut self, token_type: RXTT, error: String) {
+    fn consume(&mut self, token_type: RXTT, error: String) -> &RXT {
         if self.check(token_type) {
-            self.advance();
+            return self.advance();
         } else {
             panic!("{error}")
         }
@@ -225,9 +234,9 @@ impl Parser {
 
         self.consume(RXTT::Semicolon, "Expected ';' after value.".to_string());
 
-        return Stmt::Print(Box::new(Print {
+        return Stmt::Print(Print {
             expr: Box::new(value),
-        }));
+        });
     }
 
     fn expression_statement(&mut self) -> Stmt {
@@ -235,8 +244,47 @@ impl Parser {
 
         self.consume(RXTT::Semicolon, "Expected ';' after value.".to_string());
 
-        return Stmt::Expression(Box::new(Expression {
+        return Stmt::Expression(Expression {
             expr: Box::new(value),
-        }));
+        });
+    }
+
+    fn declaration(&mut self) -> Stmt {
+        if self.match_token(vec![RXTT::Var]) {
+            return self.var_declaration();
+        } else {
+            return self.statement();
+        }
+    }
+
+    fn var_declaration(&mut self) -> Stmt {
+        let name = match &self.peek().token {
+            RXTT::Identifier(s) => RXT {
+                token: RXTT::Identifier(s.clone()),
+                lexeme: s.clone(),
+                line: 0,
+            },
+            _ => {
+                panic!("Expected variable name.")
+            }
+        };
+
+        self.advance();
+
+        let mut initialiser: Expr = Expr::Empty;
+
+        if self.match_token(vec![RXTT::Equal]) {
+            initialiser = self.expression().unwrap();
+        }
+
+        self.consume(
+            RXTT::Semicolon,
+            "Expected ';' after variable declaration".to_owned(),
+        );
+
+        return Stmt::Var(Var {
+            name,
+            initialiser: Box::new(initialiser),
+        });
     }
 }

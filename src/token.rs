@@ -49,7 +49,7 @@ pub enum RatexTokenType {
     Less,
     LessEqual,
     // Literals.
-    Identifier,
+    Identifier(String),
     String(String),
     Number(f64),
     // Keywords.

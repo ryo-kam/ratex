@@ -4,6 +4,7 @@ use std::{
 };
 
 mod ast;
+mod environment;
 mod error;
 mod interpreter;
 mod parser;
@@ -88,7 +89,7 @@ fn run(code: String) -> Result<(), RatexError> {
 
     let ast = parser.parse().unwrap();
 
-    let mut interpreter = RatexInterpreter {};
+    let mut interpreter = RatexInterpreter::new();
     interpreter.interpret(ast);
 
     Ok(())

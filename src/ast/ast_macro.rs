@@ -3,11 +3,18 @@ use paste;
 macro_rules! ast_derive {
     ($name: ident, $($type: ident ($($prop: ident : $class: ty),+)),+) => {
         paste::paste! {
+            // #[derive(Clone)]
+            // pub enum $name {
+            //     Empty,
+            //     $(
+            //         $type(Box<$type>)
+            //     ),+
+            // }
             #[derive(Clone)]
             pub enum $name {
                 Empty,
                 $(
-                    $type(Box<$type>)
+                    $type($type)
                 ),+
             }
 
