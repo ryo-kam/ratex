@@ -9,7 +9,7 @@ mod ast_macro;
 // Run this to see expanded macro
 // cargo rustc --profile=check --bin=ratex -- -Zunpretty=expanded
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LiteralValue {
     Bool(bool),
     String(String),

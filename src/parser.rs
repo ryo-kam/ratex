@@ -236,6 +236,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::For]) {
+            return self.for_statement();
+        }
+
         if self.match_token(vec![RXTT::While]) {
             return self.while_statement();
         }
@@ -441,5 +445,62 @@ impl Parser {
             condition: Box::new(condition),
             body: Box::new(body),
         }))
+    }
+
+    fn for_statement(&mut self) -> Result<Stmt, RatexError> {
+        self.consume(RXTT::LeftParen)?;
+        let mut initialiser = Stmt::Empty;
+
+        if !self.match_token(vec![RXTT::Semicolon]) {
+            if self.match_token(vec![RXTT::Var]) {
+                initialiser = self.var_declaration()?;
+            } else {
+                initialiser = self.expression_statement()?;
+            }
+        }
+
+        let mut condition = Expr::Literal(Literal {
+            value: LiteralValue::Bool(true),
+        });
+
+        if !self.check(&RXTT::Semicolon) {
+            condition = self.expression()?;
+        }
+
+        self.consume(RXTT::Semicolon)?;
+
+        let mut increment = Expr::Empty;
+
+        if !self.match_token(vec![RXTT::RightParen]) {
+            increment = self.expression()?;
+        }
+
+        self.consume(RXTT::RightParen)?;
+
+        let mut body = self.statement()?;
+
+        if increment != Expr::Empty {
+            body = Stmt::Block(Block {
+                statements: vec![
+                    body,
+                    Stmt::Expression(Expression {
+                        expr: Box::new(increment),
+                    }),
+                ],
+            });
+        }
+
+        body = Stmt::While(While {
+            condition: Box::new(condition),
+            body: Box::new(body),
+        });
+
+        if initialiser != Stmt::Empty {
+            body = Stmt::Block(Block {
+                statements: vec![initialiser, body],
+            })
+        }
+
+        Ok(body)
     }
 }
