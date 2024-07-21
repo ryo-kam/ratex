@@ -69,6 +69,7 @@ pub enum RatexTokenType {
     True,
     Var,
     While,
+    Break,
     EOF,
 }
 

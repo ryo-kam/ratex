@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Expr, Expression, Grouping, If, Literal, LiteralValue, Logical,
-        Print, Stmt, Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Expr, Expression, Grouping, If, Literal, LiteralValue,
+        Logical, Print, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -281,6 +281,15 @@ impl Parser {
         }))
     }
 
+    fn break_statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::Break]) {
+            self.consume(RXTT::Semicolon)?;
+            return Ok(Stmt::Break(Break {}));
+        }
+
+        self.declaration()
+    }
+
     fn declaration(&mut self) -> Result<Stmt, RatexError> {
         if self.match_token(vec![RXTT::Var]) {
             Ok(self.var_declaration()?)
@@ -372,7 +381,7 @@ impl Parser {
         let mut statements = Vec::new();
 
         while !self.check(&RXTT::RightBrace) && !self.is_at_end() {
-            statements.push(self.declaration()?);
+            statements.push(self.break_statement()?);
         }
 
         self.consume(RXTT::RightBrace)?;

@@ -30,6 +30,7 @@ pub enum RatexErrorType {
     UndefinedIdentifier(String),
     InvalidAssignment(u32),
     InvalidLogicalOperation(u32),
+    Break,
 }
 
 impl Display for RatexErrorType {
@@ -62,6 +63,9 @@ impl Display for RatexErrorType {
             }
             Self::InvalidLogicalOperation(line) => {
                 write!(f, "line {}, invalid logical operation", line)
+            }
+            Self::Break => {
+                write!(f, "break statement reached")
             }
         }
     }

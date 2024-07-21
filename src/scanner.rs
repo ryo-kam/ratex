@@ -42,6 +42,7 @@ impl<'a> Scanner<'a> {
                 ("true", RXTT::True),
                 ("var", RXTT::Var),
                 ("while", RXTT::While),
+                ("break", RXTT::Break),
             ]),
         }
     }

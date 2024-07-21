@@ -1,5 +1,5 @@
 use crate::ast::{
-    Assign, Binary, Block, Expr, ExprAccept, ExprVisitor, Expression, Grouping, If, Literal,
+    Assign, Binary, Block, Break, Expr, ExprAccept, ExprVisitor, Expression, Grouping, If, Literal,
     LiteralValue, Logical, Print, Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable, While,
 };
 use crate::environment::Environment;
@@ -24,11 +24,14 @@ impl RatexInterpreter {
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RatexError> {
         for statement in statements {
             match self.execute(statement) {
-                Err(e) => {
-                    return Err(e);
-                }
+                Err(e) => match e.source {
+                    RatexErrorType::Break => {}
+                    _ => {
+                        return Err(e);
+                    }
+                },
                 _ => {}
-            }
+            };
         }
 
         Ok(())
@@ -226,5 +229,11 @@ impl StmtVisitor<()> for RatexInterpreter {
         }
 
         Ok(())
+    }
+
+    fn visit_break(&mut self, _: &Break) -> Result<(), RatexError> {
+        Err(RatexError {
+            source: RatexErrorType::Break,
+        })
     }
 }

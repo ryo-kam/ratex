@@ -45,6 +45,7 @@ ast_derive! {
     Expression(expr: Box<Expr>),
     If(condition: Box<Expr>, then_stmt: Box<Stmt>, else_stmt: Box<Stmt>),
     While(condition: Box<Expr>, body: Box<Stmt>),
+    Break(),
     Print(expr: Box<Expr>),
     Var(name: RatexToken, initialiser: Box<Expr>)
 }
