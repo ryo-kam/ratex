@@ -1,10 +1,7 @@
-var b = 1;
+print "hi";
 
-for (var a = 0; a < 10; a = a + 1) {
-    print a;
-    if (a > 3) {
-        break;
-    }
+fun add(a, b, c) {
+    print a + b + c;
 }
 
-print "hello";
+add(1,2,3);

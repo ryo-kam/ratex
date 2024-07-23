@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Break, Expr, Expression, Grouping, If, Literal, LiteralValue,
-        Logical, Print, Stmt, Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Literal,
+        LiteralValue, Logical, Print, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -127,12 +127,26 @@ impl Parser {
                 right: Box::new(right),
             }))
         } else {
-            self.primary()
+            self.call()
         }
     }
 
+    fn call(&mut self) -> Result<Expr, RatexError> {
+        let mut expr = self.primary()?;
+
+        loop {
+            if self.match_token(vec![RXTT::LeftParen]) {
+                expr = self.finish_call(expr)?;
+            } else {
+                break;
+            }
+        }
+
+        Ok(expr)
+    }
+
     fn primary(&mut self) -> Result<Expr, RatexError> {
-        match &self.tokens.get(self.current).unwrap().token {
+        match &self.tokens.get(self.current).unwrap().token_type {
             RXTT::False => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
@@ -173,7 +187,7 @@ impl Parser {
                     expr: Box::new(expr),
                 }))
             }
-            RXTT::Identifier(_) => {
+            RXTT::Identifier => {
                 self.current += 1;
                 Ok(Expr::Variable(Variable {
                     name: self.previous().clone(),
@@ -207,7 +221,7 @@ impl Parser {
             return false;
         }
 
-        self.peek().token == *token_type
+        self.peek().token_type == *token_type
     }
 
     fn advance(&mut self) -> &RXT {
@@ -232,10 +246,14 @@ impl Parser {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().token == RXTT::EOF
+        self.peek().token_type == RXTT::EOF
     }
 
     fn statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::Fun]) {
+            return self.function();
+        }
+
         if self.match_token(vec![RXTT::For]) {
             return self.for_statement();
         }
@@ -299,10 +317,11 @@ impl Parser {
     }
 
     fn var_declaration(&mut self) -> Result<Stmt, RatexError> {
-        let name = match &self.peek().token {
-            RXTT::Identifier(s) => RXT {
-                token: RXTT::Identifier(s.clone()),
-                lexeme: s.clone(),
+        let token = &self.peek();
+        let name = match token.token_type {
+            RXTT::Identifier => RXT {
+                token_type: RXTT::Identifier,
+                lexeme: token.lexeme.clone(),
                 line: 0,
             },
             _ => {
@@ -330,12 +349,12 @@ impl Parser {
         self.advance();
 
         while !self.is_at_end() {
-            match self.previous().token {
+            match self.previous().token_type {
                 RXTT::Semicolon => return (),
                 _ => {}
             }
 
-            match self.peek().token {
+            match self.peek().token_type {
                 RXTT::Class
                 | RXTT::Fun
                 | RXTT::Var
@@ -488,15 +507,18 @@ impl Parser {
 
         let mut body = self.statement()?;
 
-        if increment != Expr::Empty {
-            body = Stmt::Block(Block {
-                statements: vec![
-                    body,
-                    Stmt::Expression(Expression {
-                        expr: Box::new(increment),
-                    }),
-                ],
-            });
+        match increment {
+            Expr::Empty => {}
+            _ => {
+                body = Stmt::Block(Block {
+                    statements: vec![
+                        body,
+                        Stmt::Expression(Expression {
+                            expr: Box::new(increment),
+                        }),
+                    ],
+                });
+            }
         }
 
         body = Stmt::While(While {
@@ -504,12 +526,60 @@ impl Parser {
             body: Box::new(body),
         });
 
-        if initialiser != Stmt::Empty {
-            body = Stmt::Block(Block {
-                statements: vec![initialiser, body],
-            })
+        match initialiser {
+            Stmt::Empty => {}
+            _ => {
+                body = Stmt::Block(Block {
+                    statements: vec![initialiser, body],
+                })
+            }
         }
 
         Ok(body)
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, RatexError> {
+        let mut arguments = Vec::new();
+
+        if !self.check(&RXTT::RightParen) {
+            arguments.push(self.expression()?);
+
+            while self.match_token(vec![RXTT::Comma]) {
+                arguments.push(self.expression()?);
+            }
+        }
+
+        let paren = self.consume(RXTT::RightParen)?;
+
+        Ok(Expr::Call(Call {
+            callee: Box::new(callee),
+            paren: paren.clone(),
+            arguments,
+        }))
+    }
+
+    fn function(&mut self) -> Result<Stmt, RatexError> {
+        let name = self.consume(RXTT::Identifier)?.clone();
+
+        self.consume(RXTT::LeftParen)?;
+        let mut parameters = Vec::new();
+
+        if !self.check(&RXTT::RightParen) {
+            parameters.push(self.consume(RXTT::Identifier)?.clone());
+
+            while self.match_token(vec![RXTT::Comma]) {
+                parameters.push(self.consume(RXTT::Identifier)?.clone());
+            }
+        }
+
+        self.consume(RXTT::RightParen)?;
+        self.consume(RXTT::LeftBrace)?;
+        let body = self.block()?;
+
+        Ok(Stmt::Fun(Fun {
+            name,
+            params: parameters,
+            body,
+        }))
     }
 }

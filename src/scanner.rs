@@ -59,7 +59,7 @@ impl<'a> Scanner<'a> {
         }
 
         self.tokens.push(RatexToken {
-            token: RatexTokenType::EOF,
+            token_type: RatexTokenType::EOF,
             lexeme: "EOF".to_string(),
             line: self.line,
         });
@@ -187,7 +187,7 @@ impl<'a> Scanner<'a> {
             .to_owned();
 
         self.tokens.push(RatexToken {
-            token,
+            token_type: token,
             lexeme: text,
             line: self.line,
         });
@@ -288,7 +288,7 @@ impl<'a> Scanner<'a> {
 
         let token_type = match self.hash_map.get(value) {
             Some(token) => token.clone(),
-            None => RatexTokenType::Identifier(value.to_owned()),
+            None => RatexTokenType::Identifier,
         };
 
         self.add_token(token_type);

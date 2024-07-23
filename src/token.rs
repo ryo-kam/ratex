@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RatexToken {
-    pub token: RatexTokenType,
+    pub token_type: RatexTokenType,
     pub lexeme: String,
     pub line: u32,
 }
@@ -11,15 +11,27 @@ impl Display for RatexToken {
     fn fmt(&self, f: &mut Formatter) -> Result {
         use RatexTokenType as RXTT;
 
-        match &self.token {
+        match &self.token_type {
             RXTT::String(string) => {
-                write!(f, "{} {} {}", self.token.to_string(), self.lexeme, string)
+                write!(
+                    f,
+                    "{} {} {}",
+                    self.token_type.to_string(),
+                    self.lexeme,
+                    string
+                )
             }
             RXTT::Number(number) => {
-                write!(f, "{} {} {}", self.token.to_string(), self.lexeme, number)
+                write!(
+                    f,
+                    "{} {} {}",
+                    self.token_type.to_string(),
+                    self.lexeme,
+                    number
+                )
             }
             _ => {
-                write!(f, "{} {}", self.token.to_string(), self.lexeme)
+                write!(f, "{} {}", self.token_type.to_string(), self.lexeme)
             }
         }
     }
@@ -49,7 +61,7 @@ pub enum RatexTokenType {
     Less,
     LessEqual,
     // Literals.
-    Identifier(String),
+    Identifier,
     String(String),
     Number(f64),
     // Keywords.

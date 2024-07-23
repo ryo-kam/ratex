@@ -30,6 +30,7 @@ pub enum RatexErrorType {
     UndefinedIdentifier(String),
     InvalidAssignment(u32),
     InvalidLogicalOperation(u32),
+    InvalidFunctionCall,
     Break,
 }
 
@@ -66,6 +67,9 @@ impl Display for RatexErrorType {
             }
             Self::Break => {
                 write!(f, "break statement reached")
+            }
+            Self::InvalidFunctionCall => {
+                write!(f, "invalid function call")
             }
         }
     }

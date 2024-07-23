@@ -1,7 +1,7 @@
 macro_rules! ast_derive {
     ($name: ident, $($type: ident ($($prop: ident : $class: ty),*)),+) => {
         paste::paste! {
-            #[derive(Clone, Debug, PartialEq)]
+            #[derive(Clone)]
             pub enum $name {
                 Empty,
                 $(
@@ -10,7 +10,7 @@ macro_rules! ast_derive {
             }
 
             $(
-                #[derive(Clone, Debug, PartialEq)]
+                #[derive(Clone)]
                 pub struct $type {
                     $(
                         pub $prop: $class
