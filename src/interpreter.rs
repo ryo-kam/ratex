@@ -47,8 +47,6 @@ impl RatexInterpreter {
         statements: Vec<Stmt>,
         env: Environment,
     ) -> Result<(), RatexError> {
-        let previous = self.environment.clone();
-
         self.environment = env;
 
         for statement in statements {
@@ -186,13 +184,19 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
         }
 
         if let LiteralValue::Function(fun) = callee {
-            fun.call(self, arguments)?;
-            Ok(LiteralValue::Nil)
-        } else {
-            Err(RatexError {
-                source: RatexErrorType::InvalidFunctionCall,
-            })
+            if arguments.len() == fun.arity()? {
+                fun.call(self, arguments)?;
+                return Ok(LiteralValue::Nil);
+            } else {
+                return Err(RatexError {
+                    source: RatexErrorType::IncompatibleArity,
+                });
+            }
         }
+
+        Err(RatexError {
+            source: RatexErrorType::InvalidFunctionCall,
+        })
     }
 }
 

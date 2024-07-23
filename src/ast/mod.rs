@@ -98,7 +98,7 @@ impl RatexFunction {
                     );
                 }
 
-                interpreter.execute_block(f.body.clone(), environment);
+                interpreter.execute_block(f.body.clone(), environment)?;
                 Ok(())
             }
             _ => Err(RatexError {
@@ -112,6 +112,13 @@ impl RatexFunction {
             declaration: Box::new(stmt),
         }
     }
-}
 
-// impl RatexCallable for RatexFunction {}
+    pub fn arity(&self) -> Result<usize, RatexError> {
+        match &*self.declaration {
+            Stmt::Fun(f) => Ok(f.params.len()),
+            _ => Err(RatexError {
+                source: RatexErrorType::InvalidFunctionCall,
+            }),
+        }
+    }
+}

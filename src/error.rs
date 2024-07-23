@@ -31,6 +31,7 @@ pub enum RatexErrorType {
     InvalidAssignment(u32),
     InvalidLogicalOperation(u32),
     InvalidFunctionCall,
+    IncompatibleArity,
     Break,
 }
 
@@ -70,6 +71,9 @@ impl Display for RatexErrorType {
             }
             Self::InvalidFunctionCall => {
                 write!(f, "invalid function call")
+            }
+            Self::IncompatibleArity => {
+                write!(f, "too many or too few arguments")
             }
         }
     }

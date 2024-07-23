@@ -1,6 +1,6 @@
 print "hi";
 
-fun add(a, b, c) {
+fun add(a, b, c, d) {
     print a + b + c;
 }
 
