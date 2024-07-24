@@ -2,8 +2,6 @@ use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 use crate::ast::ast_macro::ast_derive;
-use crate::environment::Environment;
-use crate::error::RatexErrorType;
 use crate::interpreter::RatexInterpreter;
 use crate::token::RatexToken;
 use crate::RatexError;
