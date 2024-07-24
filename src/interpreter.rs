@@ -29,7 +29,7 @@ impl RatexInterpreter {
         statements: Vec<Stmt>,
         env: Rc<RefCell<Environment>>,
     ) -> Result<(), RatexError> {
-        let old_environment = self.environment.borrow().get_ref();
+        let old_environment = Rc::clone(&self.environment);
 
         self.environment = env;
 
@@ -193,9 +193,6 @@ impl ExprVisitor<Object> for RatexInterpreter {
         }
 
         if let Object::Function(fun) = callee {
-            // dbg!(&arguments);
-
-            // dbg!(&fun);
             if arguments.len() == fun.arity()? {
                 match fun.call(self, arguments) {
                     Ok(obj) => return Ok(obj),
@@ -225,10 +222,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
             body: target.body.clone(),
         });
 
-        let function = Object::Function(RatexFunction::new(
-            stmt,
-            self.environment.borrow().get_ref(),
-        ));
+        let function = Object::Function(RatexFunction::new(stmt, Rc::clone(&self.environment)));
 
         Ok(function)
     }
@@ -236,7 +230,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
 
 impl StmtVisitor<()> for RatexInterpreter {
     fn visit_block(&mut self, target: &Block) -> Result<(), RatexError> {
-        let block_env = Environment::new_child(self.environment.borrow().get_ref());
+        let block_env = Environment::new_child(Rc::clone(&self.environment));
         self.execute_block(target.statements.clone(), block_env)?;
 
         Ok(())
@@ -262,10 +256,7 @@ impl StmtVisitor<()> for RatexInterpreter {
     fn visit_fun(&mut self, target: &Fun) -> Result<(), RatexError> {
         let stmt = Stmt::Fun(target.clone());
 
-        let function = Object::Function(RatexFunction::new(
-            stmt,
-            self.environment.borrow().get_ref(),
-        ));
+        let function = Object::Function(RatexFunction::new(stmt, Rc::clone(&self.environment)));
 
         self.environment
             .borrow_mut()
