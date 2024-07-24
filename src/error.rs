@@ -3,6 +3,8 @@ use std::{
     fmt::{Debug, Display, Formatter, Result},
 };
 
+use crate::ast::Object;
+
 #[derive(Debug)]
 pub struct RatexError {
     pub source: RatexErrorType,
@@ -33,6 +35,7 @@ pub enum RatexErrorType {
     InvalidFunctionCall,
     IncompatibleArity,
     Break,
+    Return(Object),
 }
 
 impl Display for RatexErrorType {
@@ -74,6 +77,9 @@ impl Display for RatexErrorType {
             }
             Self::IncompatibleArity => {
                 write!(f, "too many or too few arguments")
+            }
+            Self::Return(_) => {
+                write!(f, "returned")
             }
         }
     }

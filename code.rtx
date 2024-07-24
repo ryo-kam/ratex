@@ -1,12 +1,14 @@
-print "hi";
+fun makeCounter() {
+    var i = 0;
 
-fun add(a, b) {
-    print a + b;
+    fun count() {
+        i = i + 1;
+        print i;
+    }
+    
+    return count;
 }
 
-var a = clock();
-var b = 1000;
-
-print a;
-
-add(a, b);
+var counter = makeCounter();
+counter(); // "1".
+counter(); // "2".

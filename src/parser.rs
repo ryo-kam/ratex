@@ -1,7 +1,7 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Literal,
-        Object, Logical, Print, Stmt, Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Literal, Logical,
+        Object, Print, Return, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -161,9 +161,7 @@ impl Parser {
             }
             RXTT::Nil => {
                 self.current += 1;
-                Ok(Expr::Literal(Literal {
-                    value: Object::Nil,
-                }))
+                Ok(Expr::Literal(Literal { value: Object::Nil }))
             }
             RXTT::Number(n) => {
                 self.current += 1;
@@ -250,8 +248,12 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::Return]) {
+            return self.return_statement();
+        }
+
         if self.match_token(vec![RXTT::Fun]) {
-            return self.function();
+            return self.function_statement();
         }
 
         if self.match_token(vec![RXTT::For]) {
@@ -558,7 +560,7 @@ impl Parser {
         }))
     }
 
-    fn function(&mut self) -> Result<Stmt, RatexError> {
+    fn function_statement(&mut self) -> Result<Stmt, RatexError> {
         let name = self.consume(RXTT::Identifier)?.clone();
 
         self.consume(RXTT::LeftParen)?;
@@ -580,6 +582,21 @@ impl Parser {
             name,
             params: parameters,
             body,
+        }))
+    }
+
+    fn return_statement(&mut self) -> Result<Stmt, RatexError> {
+        let keyword = self.previous().clone();
+        let mut value = Expr::Empty;
+        if !self.check(&RXTT::Semicolon) {
+            value = self.expression()?;
+        }
+
+        self.consume(RXTT::Semicolon)?;
+
+        Ok(Stmt::Return(Return {
+            keyword,
+            value: Box::new(value),
         }))
     }
 }

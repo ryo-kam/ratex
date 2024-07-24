@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -13,6 +14,7 @@ use crate::{
 #[derive(Debug)]
 pub struct RatexFunction {
     declaration: Box<Stmt>,
+    closure: Rc<RefCell<Environment>>,
 }
 
 impl RatexCallable for RatexFunction {
@@ -21,18 +23,16 @@ impl RatexCallable for RatexFunction {
         interpreter: &mut RatexInterpreter,
         arguments: Vec<Object>,
     ) -> Result<Object, RatexError> {
-        let mut environment = Environment::new();
-
         match &*self.declaration {
             Stmt::Fun(f) => {
                 for i in 0..f.params.len() {
-                    environment.define(
+                    self.closure.borrow_mut().define(
                         f.params.get(i).unwrap().lexeme.clone(),
                         arguments.get(i).unwrap().clone(),
                     );
                 }
 
-                interpreter.execute_block(f.body.clone(), environment)?;
+                interpreter.execute_block(f.body.clone(), Rc::clone(&self.closure))?;
                 Ok(Object::Nil)
             }
             _ => Err(RatexError {
@@ -52,8 +52,9 @@ impl RatexCallable for RatexFunction {
 }
 
 impl RatexFunction {
-    pub fn new(stmt: Stmt) -> Rc<Self> {
+    pub fn new(stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<Self> {
         Rc::new(RatexFunction {
+            closure,
             declaration: Box::new(stmt),
         })
     }

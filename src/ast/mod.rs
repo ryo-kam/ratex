@@ -62,6 +62,7 @@ ast_derive! {
     While(condition: Box<Expr>, body: Box<Stmt>),
     Break(),
     Print(expr: Box<Expr>),
+    Return(keyword: RatexToken, value: Box<Expr>),
     Var(name: RatexToken, initialiser: Box<Expr>)
 }
 
