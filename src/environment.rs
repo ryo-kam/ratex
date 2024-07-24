@@ -5,7 +5,7 @@ use crate::{
     error::{RatexError, RatexErrorType},
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Environment {
     values: HashMap<String, Object>,
     enclosing: Option<Box<Environment>>,

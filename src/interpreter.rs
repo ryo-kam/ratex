@@ -1,11 +1,11 @@
 use crate::ast::{
     Assign, Binary, Block, Break, Call, Expr, ExprAccept, ExprVisitor, Expression, Fun, Grouping,
-    If, Literal, Logical, Object, Print, RatexCallable, Stmt, StmtAccept, StmtVisitor, Unary, Var,
-    Variable, While,
+    If, Literal, Logical, Object, Print, Stmt, StmtAccept, StmtVisitor, Unary, Var, Variable,
+    While,
 };
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
-use crate::functions::RatexFunction;
+use crate::functions::{ClockFunction, RatexFunction};
 use crate::token::RatexTokenType as RXTT;
 
 pub struct RatexInterpreter {
@@ -14,9 +14,11 @@ pub struct RatexInterpreter {
 
 impl RatexInterpreter {
     pub fn new() -> Self {
-        RatexInterpreter {
-            environment: Environment::new(),
-        }
+        let mut environment = Environment::new();
+
+        environment.define("clock".to_string(), Object::Function(ClockFunction::new()));
+
+        RatexInterpreter { environment }
     }
 
     pub fn evaluate(&mut self, expr: Box<Expr>) -> Result<Object, RatexError> {
@@ -48,6 +50,8 @@ impl RatexInterpreter {
         statements: Vec<Stmt>,
         env: Environment,
     ) -> Result<(), RatexError> {
+        let old_environment: Environment = self.environment.clone();
+
         self.environment = env;
 
         for statement in statements {
@@ -59,9 +63,7 @@ impl RatexInterpreter {
             }
         }
 
-        if let Some(parent) = self.environment.get_enclosing() {
-            self.environment = *parent;
-        }
+        self.environment = old_environment;
 
         Ok(())
     }
@@ -182,8 +184,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
 
         if let Object::Function(fun) = callee {
             if arguments.len() == fun.arity()? {
-                fun.call(self, arguments)?;
-                return Ok(Object::Nil);
+                return Ok(fun.call(self, arguments)?);
             } else {
                 return Err(RatexError {
                     source: RatexErrorType::IncompatibleArity,

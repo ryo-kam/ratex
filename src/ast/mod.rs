@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::rc::Rc;
 
 use crate::ast::ast_macro::ast_derive;
@@ -8,9 +8,7 @@ use crate::RatexError;
 
 mod ast_macro;
 
-// Run this to see expanded macro
-// cargo rustc --profile=check --bin=ratex -- -Zunpretty=expanded
-
+#[derive(Debug)]
 pub enum Object {
     Bool(bool),
     String(String),
@@ -79,7 +77,7 @@ impl Display for Object {
     }
 }
 
-pub trait RatexCallable {
+pub trait RatexCallable: Debug {
     fn call(
         &self,
         interpreter: &mut RatexInterpreter,

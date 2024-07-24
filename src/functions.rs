@@ -1,4 +1,7 @@
-use std::rc::Rc;
+use std::{
+    rc::Rc,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
     ast::{Object, RatexCallable, Stmt},
@@ -7,7 +10,7 @@ use crate::{
     interpreter::RatexInterpreter,
 };
 
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct RatexFunction {
     declaration: Box<Stmt>,
 }
@@ -53,5 +56,29 @@ impl RatexFunction {
         Rc::new(RatexFunction {
             declaration: Box::new(stmt),
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct ClockFunction {}
+
+impl RatexCallable for ClockFunction {
+    fn call(&self, _: &mut RatexInterpreter, _: Vec<Object>) -> Result<Object, RatexError> {
+        Ok(Object::Number(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs_f64(),
+        ))
+    }
+
+    fn arity(&self) -> Result<usize, RatexError> {
+        Ok(0)
+    }
+}
+
+impl ClockFunction {
+    pub fn new() -> Rc<Self> {
+        Rc::new(ClockFunction {})
     }
 }
