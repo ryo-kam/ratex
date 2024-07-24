@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Default)]
 pub struct RatexToken {
     pub token_type: RatexTokenType,
     pub lexeme: String,
@@ -37,7 +37,7 @@ impl Display for RatexToken {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum RatexTokenType {
     // Single-character tokens.
     LeftParen,
@@ -81,6 +81,7 @@ pub enum RatexTokenType {
     True,
     Var,
     While,
+    #[default]
     Break,
     EOF,
 }

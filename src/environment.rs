@@ -67,4 +67,12 @@ impl Environment {
 
         Ok(())
     }
+
+    pub fn get_ref(&self) -> Rc<RefCell<Environment>> {
+        if let Some(e) = &self.enclosing {
+            return Rc::clone(&e);
+        } else {
+            return Environment::new();
+        }
+    }
 }

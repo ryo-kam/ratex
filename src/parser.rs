@@ -1,9 +1,10 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Literal, Logical,
-        Object, Print, Return, Stmt, Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Lambda, Literal,
+        Logical, Object, Print, Return, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
+    functions::RatexFunction,
     token::{RatexToken as RXT, RatexTokenType as RXTT},
 };
 
@@ -190,6 +191,10 @@ impl Parser {
                 Ok(Expr::Variable(Variable {
                     name: self.previous().clone(),
                 }))
+            }
+            RXTT::Fun => {
+                self.current += 1;
+                self.anonymous_function()
             }
             _ => Err(RatexError {
                 source: RatexErrorType::UnexpectedToken(
@@ -597,6 +602,28 @@ impl Parser {
         Ok(Stmt::Return(Return {
             keyword,
             value: Box::new(value),
+        }))
+    }
+
+    fn anonymous_function(&mut self) -> Result<Expr, RatexError> {
+        self.consume(RXTT::LeftParen)?;
+        let mut parameters = Vec::new();
+
+        if !self.check(&RXTT::RightParen) {
+            parameters.push(self.consume(RXTT::Identifier)?.clone());
+
+            while self.match_token(vec![RXTT::Comma]) {
+                parameters.push(self.consume(RXTT::Identifier)?.clone());
+            }
+        }
+
+        self.consume(RXTT::RightParen)?;
+        self.consume(RXTT::LeftBrace)?;
+        let body = self.block()?;
+
+        Ok(Expr::Lambda(Lambda {
+            params: parameters,
+            body,
         }))
     }
 }

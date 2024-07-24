@@ -50,7 +50,8 @@ ast_derive! {
     Grouping(expr: Box<Expr>),
     Variable(name: RatexToken),
     Assign(name: RatexToken, value: Box<Expr>),
-    Call(callee: Box<Expr>, paren: RatexToken, arguments: Vec<Expr>)
+    Call(callee: Box<Expr>, paren: RatexToken, arguments: Vec<Expr>),
+    Lambda(params: Vec<RatexToken>, body: Vec<Stmt>)
 }
 
 ast_derive! {

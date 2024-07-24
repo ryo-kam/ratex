@@ -3,31 +3,48 @@ use std::rc::Rc;
 
 use crate::ast::{
     Assign, Binary, Block, Break, Call, Expr, ExprAccept, ExprVisitor, Expression, Fun, Grouping,
-    If, Literal, Logical, Object, Print, Return, Stmt, StmtAccept, StmtVisitor, Unary, Var,
+    If, Lambda, Literal, Logical, Object, Print, Return, Stmt, StmtAccept, StmtVisitor, Unary, Var,
     Variable, While,
 };
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
 use crate::functions::{ClockFunction, RatexFunction};
-use crate::token::RatexTokenType as RXTT;
+use crate::token::{RatexToken, RatexTokenType as RXTT};
 
 pub struct RatexInterpreter {
     environment: Rc<RefCell<Environment>>,
 }
 
 impl RatexInterpreter {
-    pub fn new() -> Self {
-        let environment = Environment::new();
-
-        environment
-            .borrow_mut()
-            .define("clock".to_string(), Object::Function(ClockFunction::new()));
-
-        RatexInterpreter { environment }
-    }
-
     pub fn evaluate(&mut self, expr: Box<Expr>) -> Result<Object, RatexError> {
         expr.accept(self)
+    }
+
+    pub fn execute(&mut self, statement: Stmt) -> Result<(), RatexError> {
+        statement.accept(self)
+    }
+
+    pub fn execute_block(
+        &mut self,
+        statements: Vec<Stmt>,
+        env: Rc<RefCell<Environment>>,
+    ) -> Result<(), RatexError> {
+        let old_environment = self.environment.borrow().get_ref();
+
+        self.environment = env;
+
+        for statement in statements {
+            match self.execute(statement) {
+                Err(e) => {
+                    return Err(e);
+                }
+                Ok(()) => {}
+            }
+        }
+
+        self.environment = old_environment;
+
+        Ok(())
     }
 
     pub fn interpret(&mut self, statements: Vec<Stmt>) -> Result<(), RatexError> {
@@ -46,31 +63,14 @@ impl RatexInterpreter {
         Ok(())
     }
 
-    pub fn execute(&mut self, statement: Stmt) -> Result<(), RatexError> {
-        statement.accept(self)
-    }
+    pub fn new() -> Self {
+        let environment = Environment::new();
 
-    pub fn execute_block(
-        &mut self,
-        statements: Vec<Stmt>,
-        env: Rc<RefCell<Environment>>,
-    ) -> Result<(), RatexError> {
-        let old_environment = Rc::clone(&self.environment);
+        environment
+            .borrow_mut()
+            .define("clock".to_string(), Object::Function(ClockFunction::new()));
 
-        self.environment = env;
-
-        for statement in statements {
-            match self.execute(statement) {
-                Err(e) => {
-                    return Err(e);
-                }
-                Ok(()) => {}
-            }
-        }
-
-        self.environment = old_environment;
-
-        Ok(())
+        RatexInterpreter { environment }
     }
 }
 
@@ -130,35 +130,6 @@ impl ExprVisitor<Object> for RatexInterpreter {
         }
     }
 
-    fn visit_variable(&mut self, target: &Variable) -> Result<Object, RatexError> {
-        match &target.name.token_type {
-            RXTT::Identifier => Ok(self
-                .environment
-                .borrow()
-                .get(target.name.lexeme.clone())?
-                .clone()),
-            _ => Err(RatexError {
-                source: RatexErrorType::ExpectedToken(target.name.line, "Identifier".to_owned()),
-            }),
-        }
-    }
-
-    fn visit_literal(&mut self, target: &Literal) -> Result<Object, RatexError> {
-        Ok(target.value.clone())
-    }
-
-    fn visit_grouping(&mut self, target: &Grouping) -> Result<Object, RatexError> {
-        self.evaluate(target.expr.clone())
-    }
-
-    fn visit_assign(&mut self, target: &Assign) -> Result<Object, RatexError> {
-        let value = self.evaluate(target.value.clone())?;
-        self.environment
-            .borrow_mut()
-            .assign(target.name.lexeme.clone(), value.clone())?;
-        Ok(value)
-    }
-
     fn visit_logical(&mut self, target: &Logical) -> Result<Object, RatexError> {
         let left = self.evaluate(target.left.clone())?;
 
@@ -183,6 +154,35 @@ impl ExprVisitor<Object> for RatexInterpreter {
         }
     }
 
+    fn visit_literal(&mut self, target: &Literal) -> Result<Object, RatexError> {
+        Ok(target.value.clone())
+    }
+
+    fn visit_grouping(&mut self, target: &Grouping) -> Result<Object, RatexError> {
+        self.evaluate(target.expr.clone())
+    }
+
+    fn visit_variable(&mut self, target: &Variable) -> Result<Object, RatexError> {
+        match &target.name.token_type {
+            RXTT::Identifier => Ok(self
+                .environment
+                .borrow()
+                .get(target.name.lexeme.clone())?
+                .clone()),
+            _ => Err(RatexError {
+                source: RatexErrorType::ExpectedToken(target.name.line, "Identifier".to_owned()),
+            }),
+        }
+    }
+
+    fn visit_assign(&mut self, target: &Assign) -> Result<Object, RatexError> {
+        let value = self.evaluate(target.value.clone())?;
+        self.environment
+            .borrow_mut()
+            .assign(target.name.lexeme.clone(), value.clone())?;
+        Ok(value)
+    }
+
     fn visit_call(&mut self, target: &Call) -> Result<Object, RatexError> {
         let callee = self.evaluate(target.callee.clone())?;
 
@@ -193,6 +193,9 @@ impl ExprVisitor<Object> for RatexInterpreter {
         }
 
         if let Object::Function(fun) = callee {
+            // dbg!(&arguments);
+
+            // dbg!(&fun);
             if arguments.len() == fun.arity()? {
                 match fun.call(self, arguments) {
                     Ok(obj) => return Ok(obj),
@@ -214,11 +217,26 @@ impl ExprVisitor<Object> for RatexInterpreter {
             source: RatexErrorType::InvalidFunctionCall,
         })
     }
+
+    fn visit_lambda(&mut self, target: &Lambda) -> Result<Object, RatexError> {
+        let stmt = Stmt::Fun(Fun {
+            name: RatexToken::default(),
+            params: target.params.clone(),
+            body: target.body.clone(),
+        });
+
+        let function = Object::Function(RatexFunction::new(
+            stmt,
+            self.environment.borrow().get_ref(),
+        ));
+
+        Ok(function)
+    }
 }
 
 impl StmtVisitor<()> for RatexInterpreter {
     fn visit_block(&mut self, target: &Block) -> Result<(), RatexError> {
-        let block_env = Environment::new_child(Rc::clone(&self.environment));
+        let block_env = Environment::new_child(self.environment.borrow().get_ref());
         self.execute_block(target.statements.clone(), block_env)?;
 
         Ok(())
@@ -244,7 +262,10 @@ impl StmtVisitor<()> for RatexInterpreter {
     fn visit_fun(&mut self, target: &Fun) -> Result<(), RatexError> {
         let stmt = Stmt::Fun(target.clone());
 
-        let function = Object::Function(RatexFunction::new(stmt, Rc::clone(&self.environment)));
+        let function = Object::Function(RatexFunction::new(
+            stmt,
+            self.environment.borrow().get_ref(),
+        ));
 
         self.environment
             .borrow_mut()
