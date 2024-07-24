@@ -1,10 +1,11 @@
 use crate::ast::{
     Assign, Binary, Block, Break, Call, Expr, ExprAccept, ExprVisitor, Expression, Fun, Grouping,
-    If, Literal, LiteralValue, Logical, Print, RatexFunction, Stmt, StmtAccept, StmtVisitor, Unary,
-    Var, Variable, While,
+    If, Literal, Logical, Object, Print, RatexCallable, Stmt, StmtAccept, StmtVisitor, Unary, Var,
+    Variable, While,
 };
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
+use crate::functions::RatexFunction;
 use crate::token::RatexTokenType as RXTT;
 
 pub struct RatexInterpreter {
@@ -18,7 +19,7 @@ impl RatexInterpreter {
         }
     }
 
-    pub fn evaluate(&mut self, expr: Box<Expr>) -> Result<LiteralValue, RatexError> {
+    pub fn evaluate(&mut self, expr: Box<Expr>) -> Result<Object, RatexError> {
         expr.accept(self)
     }
 
@@ -66,67 +67,63 @@ impl RatexInterpreter {
     }
 }
 
-impl ExprVisitor<LiteralValue> for RatexInterpreter {
-    fn visit_binary(&mut self, target: &Binary) -> Result<LiteralValue, RatexError> {
-        let left: LiteralValue = self.evaluate(target.left.clone())?;
-        let right: LiteralValue = self.evaluate(target.right.clone())?;
+impl ExprVisitor<Object> for RatexInterpreter {
+    fn visit_binary(&mut self, target: &Binary) -> Result<Object, RatexError> {
+        let left: Object = self.evaluate(target.left.clone())?;
+        let right: Object = self.evaluate(target.right.clone())?;
 
         match (left, right) {
-            (LiteralValue::Number(n1), LiteralValue::Number(n2)) => {
-                match target.operator.token_type {
-                    RXTT::Minus => Ok(LiteralValue::Number(n1 - n2)),
-                    RXTT::Slash => Ok(LiteralValue::Number(n1 / n2)),
-                    RXTT::Star => Ok(LiteralValue::Number(n1 * n2)),
-                    RXTT::Plus => Ok(LiteralValue::Number(n1 + n2)),
-                    RXTT::Greater => Ok(LiteralValue::Bool(n1 > n2)),
-                    RXTT::GreaterEqual => Ok(LiteralValue::Bool(n1 >= n2)),
-                    RXTT::Less => Ok(LiteralValue::Bool(n1 < n2)),
-                    RXTT::LessEqual => Ok(LiteralValue::Bool(n1 <= n2)),
-                    RXTT::BangEqual => Ok(LiteralValue::Bool(n1 != n2)),
-                    RXTT::EqualEqual => Ok(LiteralValue::Bool(n1 == n2)),
-                    _ => Ok(LiteralValue::Nil),
-                }
-            }
-            (LiteralValue::String(s1), LiteralValue::String(s2)) => {
-                match target.operator.token_type {
-                    RXTT::Plus => Ok(LiteralValue::String(s1 + &s2)),
-                    RXTT::BangEqual => Ok(LiteralValue::Bool(s1 != s2)),
-                    RXTT::EqualEqual => Ok(LiteralValue::Bool(s1 == s2)),
-                    _ => Ok(LiteralValue::Nil),
-                }
-            }
-            (LiteralValue::Bool(b1), LiteralValue::Bool(b2)) => match target.operator.token_type {
-                RXTT::Greater => Ok(LiteralValue::Bool(b1 > b2)),
-                RXTT::GreaterEqual => Ok(LiteralValue::Bool(b1 >= b2)),
-                RXTT::Less => Ok(LiteralValue::Bool(b1 < b2)),
-                RXTT::LessEqual => Ok(LiteralValue::Bool(b1 <= b2)),
-                RXTT::BangEqual => Ok(LiteralValue::Bool(b1 != b2)),
-                RXTT::EqualEqual => Ok(LiteralValue::Bool(b1 == b2)),
-                _ => Ok(LiteralValue::Nil),
+            (Object::Number(n1), Object::Number(n2)) => match target.operator.token_type {
+                RXTT::Minus => Ok(Object::Number(n1 - n2)),
+                RXTT::Slash => Ok(Object::Number(n1 / n2)),
+                RXTT::Star => Ok(Object::Number(n1 * n2)),
+                RXTT::Plus => Ok(Object::Number(n1 + n2)),
+                RXTT::Greater => Ok(Object::Bool(n1 > n2)),
+                RXTT::GreaterEqual => Ok(Object::Bool(n1 >= n2)),
+                RXTT::Less => Ok(Object::Bool(n1 < n2)),
+                RXTT::LessEqual => Ok(Object::Bool(n1 <= n2)),
+                RXTT::BangEqual => Ok(Object::Bool(n1 != n2)),
+                RXTT::EqualEqual => Ok(Object::Bool(n1 == n2)),
+                _ => Ok(Object::Nil),
             },
-            _ => Ok(LiteralValue::Nil),
+            (Object::String(s1), Object::String(s2)) => match target.operator.token_type {
+                RXTT::Plus => Ok(Object::String(s1 + &s2)),
+                RXTT::BangEqual => Ok(Object::Bool(s1 != s2)),
+                RXTT::EqualEqual => Ok(Object::Bool(s1 == s2)),
+                _ => Ok(Object::Nil),
+            },
+            (Object::Bool(b1), Object::Bool(b2)) => match target.operator.token_type {
+                RXTT::Greater => Ok(Object::Bool(b1 > b2)),
+                RXTT::GreaterEqual => Ok(Object::Bool(b1 >= b2)),
+                RXTT::Less => Ok(Object::Bool(b1 < b2)),
+                RXTT::LessEqual => Ok(Object::Bool(b1 <= b2)),
+                RXTT::BangEqual => Ok(Object::Bool(b1 != b2)),
+                RXTT::EqualEqual => Ok(Object::Bool(b1 == b2)),
+                _ => Ok(Object::Nil),
+            },
+            _ => Ok(Object::Nil),
         }
     }
 
-    fn visit_unary(&mut self, target: &Unary) -> Result<LiteralValue, RatexError> {
-        let right: LiteralValue = self.evaluate(target.right.clone())?;
+    fn visit_unary(&mut self, target: &Unary) -> Result<Object, RatexError> {
+        let right: Object = self.evaluate(target.right.clone())?;
 
         match target.operator.token_type {
             RXTT::Minus => match right {
-                LiteralValue::Bool(b) => Ok(LiteralValue::Bool(!b)),
-                LiteralValue::Number(n) => Ok(LiteralValue::Number(-n)),
-                _ => Ok(LiteralValue::Nil),
+                Object::Bool(b) => Ok(Object::Bool(!b)),
+                Object::Number(n) => Ok(Object::Number(-n)),
+                _ => Ok(Object::Nil),
             },
             RXTT::Bang => match right {
-                LiteralValue::Bool(b) => Ok(LiteralValue::Bool(b)),
-                LiteralValue::String(_) | LiteralValue::Number(_) => Ok(LiteralValue::Bool(true)),
-                _ => Ok(LiteralValue::Nil),
+                Object::Bool(b) => Ok(Object::Bool(b)),
+                Object::String(_) | Object::Number(_) => Ok(Object::Bool(true)),
+                _ => Ok(Object::Nil),
             },
-            _ => Ok(LiteralValue::Nil),
+            _ => Ok(Object::Nil),
         }
     }
 
-    fn visit_variable(&mut self, target: &Variable) -> Result<LiteralValue, RatexError> {
+    fn visit_variable(&mut self, target: &Variable) -> Result<Object, RatexError> {
         match &target.name.token_type {
             RXTT::Identifier => Ok(self.environment.get(target.name.lexeme.clone())?.clone()),
             _ => Err(RatexError {
@@ -135,22 +132,22 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
         }
     }
 
-    fn visit_literal(&mut self, target: &Literal) -> Result<LiteralValue, RatexError> {
+    fn visit_literal(&mut self, target: &Literal) -> Result<Object, RatexError> {
         Ok(target.value.clone())
     }
 
-    fn visit_grouping(&mut self, target: &Grouping) -> Result<LiteralValue, RatexError> {
+    fn visit_grouping(&mut self, target: &Grouping) -> Result<Object, RatexError> {
         self.evaluate(target.expr.clone())
     }
 
-    fn visit_assign(&mut self, target: &Assign) -> Result<LiteralValue, RatexError> {
+    fn visit_assign(&mut self, target: &Assign) -> Result<Object, RatexError> {
         let value = self.evaluate(target.value.clone())?;
         self.environment
             .assign(target.name.lexeme.clone(), value.clone())?;
         Ok(value)
     }
 
-    fn visit_logical(&mut self, target: &Logical) -> Result<LiteralValue, RatexError> {
+    fn visit_logical(&mut self, target: &Logical) -> Result<Object, RatexError> {
         let left = self.evaluate(target.left.clone())?;
 
         match target.operator.token_type {
@@ -174,7 +171,7 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
         }
     }
 
-    fn visit_call(&mut self, target: &Call) -> Result<LiteralValue, RatexError> {
+    fn visit_call(&mut self, target: &Call) -> Result<Object, RatexError> {
         let callee = self.evaluate(target.callee.clone())?;
 
         let mut arguments = Vec::new();
@@ -183,10 +180,10 @@ impl ExprVisitor<LiteralValue> for RatexInterpreter {
             arguments.push(self.evaluate(Box::new(argument.clone()))?);
         }
 
-        if let LiteralValue::Function(fun) = callee {
+        if let Object::Function(fun) = callee {
             if arguments.len() == fun.arity()? {
                 fun.call(self, arguments)?;
-                return Ok(LiteralValue::Nil);
+                return Ok(Object::Nil);
             } else {
                 return Err(RatexError {
                     source: RatexErrorType::IncompatibleArity,
@@ -213,7 +210,7 @@ impl StmtVisitor<()> for RatexInterpreter {
     }
 
     fn visit_var(&mut self, target: &Var) -> Result<(), RatexError> {
-        let mut value = LiteralValue::Nil;
+        let mut value = Object::Nil;
 
         match *target.initialiser {
             Expr::Empty => {}
@@ -273,7 +270,7 @@ impl StmtVisitor<()> for RatexInterpreter {
     fn visit_fun(&mut self, target: &Fun) -> Result<(), RatexError> {
         let stmt = Stmt::Fun(target.clone());
 
-        let function = LiteralValue::Function(RatexFunction::new(stmt));
+        let function = Object::Function(RatexFunction::new(stmt));
         self.environment
             .define(target.name.lexeme.clone(), function);
 

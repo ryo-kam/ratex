@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Literal,
-        LiteralValue, Logical, Print, Stmt, Unary, Var, Variable, While,
+        Object, Logical, Print, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -150,31 +150,31 @@ impl Parser {
             RXTT::False => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
-                    value: LiteralValue::Bool(false),
+                    value: Object::Bool(false),
                 }))
             }
             RXTT::True => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
-                    value: LiteralValue::Bool(true),
+                    value: Object::Bool(true),
                 }))
             }
             RXTT::Nil => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
-                    value: LiteralValue::Nil,
+                    value: Object::Nil,
                 }))
             }
             RXTT::Number(n) => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
-                    value: LiteralValue::Number(n.clone()),
+                    value: Object::Number(n.clone()),
                 }))
             }
             RXTT::String(s) => {
                 self.current += 1;
                 Ok(Expr::Literal(Literal {
-                    value: LiteralValue::String(s.clone()),
+                    value: Object::String(s.clone()),
                 }))
             }
             RXTT::LeftParen => {
@@ -488,7 +488,7 @@ impl Parser {
         }
 
         let mut condition = Expr::Literal(Literal {
-            value: LiteralValue::Bool(true),
+            value: Object::Bool(true),
         });
 
         if !self.check(&RXTT::Semicolon) {

@@ -6,6 +6,7 @@ use std::{
 mod ast;
 mod environment;
 mod error;
+mod functions;
 mod interpreter;
 mod parser;
 mod scanner;

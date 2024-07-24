@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 use crate::{
-    ast::LiteralValue,
+    ast::Object,
     error::{RatexError, RatexErrorType},
 };
 
 #[derive(Clone)]
 pub struct Environment {
-    values: HashMap<String, LiteralValue>,
+    values: HashMap<String, Object>,
     enclosing: Option<Box<Environment>>,
 }
 
@@ -26,7 +26,7 @@ impl Environment {
         }
     }
 
-    pub fn define(&mut self, name: String, value: LiteralValue) {
+    pub fn define(&mut self, name: String, value: Object) {
         self.values.insert(name, value);
     }
 
@@ -34,7 +34,7 @@ impl Environment {
         self.enclosing.clone()
     }
 
-    pub fn get(&self, name: String) -> Result<&LiteralValue, RatexError> {
+    pub fn get(&self, name: String) -> Result<&Object, RatexError> {
         match self.values.get(&name) {
             Some(value) => Ok(value),
             None => match &self.enclosing {
@@ -48,7 +48,7 @@ impl Environment {
         }
     }
 
-    pub fn assign(&mut self, name: String, value: LiteralValue) -> Result<(), RatexError> {
+    pub fn assign(&mut self, name: String, value: Object) -> Result<(), RatexError> {
         if self.values.contains_key(&name) {
             self.values.insert(name, value);
         } else {

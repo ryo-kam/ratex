@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Display, Formatter};
 use std::rc::Rc;
 
 use crate::ast::ast_macro::ast_derive;
@@ -6,30 +6,41 @@ use crate::environment::Environment;
 use crate::error::RatexErrorType;
 use crate::interpreter::RatexInterpreter;
 use crate::token::RatexToken;
-use crate::{environment, RatexError};
+use crate::RatexError;
 
 mod ast_macro;
 
 // Run this to see expanded macro
 // cargo rustc --profile=check --bin=ratex -- -Zunpretty=expanded
 
-#[derive(Clone)]
-pub enum LiteralValue {
+pub enum Object {
     Bool(bool),
     String(String),
     Number(f64),
-    Function(RatexFunction),
+    Function(Rc<dyn RatexCallable>),
     Nil,
 }
 
-impl LiteralValue {
+impl Object {
     pub fn is_truthy(&self) -> bool {
         match self {
-            LiteralValue::Bool(b) => return *b,
-            LiteralValue::String(s) => return s.len() > 0,
-            LiteralValue::Number(n) => return *n != 0.0,
-            LiteralValue::Function(_) => return true,
-            LiteralValue::Nil => return false,
+            Object::Bool(b) => return *b,
+            Object::String(s) => return s.len() > 0,
+            Object::Number(n) => return *n != 0.0,
+            Object::Function(_) => return true,
+            Object::Nil => return false,
+        }
+    }
+}
+
+impl Clone for Object {
+    fn clone(&self) -> Self {
+        match self {
+            Object::Bool(b) => Object::Bool(b.clone()),
+            Object::String(s) => Object::String(s.clone()),
+            Object::Number(n) => Object::Number(n.clone()),
+            Object::Function(f) => Object::Function(Rc::clone(&f)),
+            Object::Nil => Object::Nil,
         }
     }
 }
@@ -39,7 +50,7 @@ ast_derive! {
     Binary(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
     Unary(operator: RatexToken, right: Box<Expr>),
     Logical(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
-    Literal(value: LiteralValue),
+    Literal(value: Object),
     Grouping(expr: Box<Expr>),
     Variable(name: RatexToken),
     Assign(name: RatexToken, value: Box<Expr>),
@@ -58,67 +69,24 @@ ast_derive! {
     Var(name: RatexToken, initialiser: Box<Expr>)
 }
 
-impl Display for LiteralValue {
+impl Display for Object {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         match self {
-            LiteralValue::Bool(b) => write!(f, "{b}"),
-            LiteralValue::String(s) => write!(f, "{s}"),
-            LiteralValue::Number(n) => write!(f, "{n}"),
-            LiteralValue::Function(rf) => {
-                if let Stmt::Fun(fun) = &*rf.declaration {
-                    write!(f, "<fn {}>", fun.name.lexeme)
-                } else {
-                    write!(f, "Invalid function")
-                }
-            }
-            LiteralValue::Nil => write!(f, "Nil"),
+            Object::Bool(b) => write!(f, "{b}"),
+            Object::String(s) => write!(f, "{s}"),
+            Object::Number(n) => write!(f, "{n}"),
+            Object::Function(_) => write!(f, ""),
+            Object::Nil => write!(f, "Nil"),
         }
     }
 }
 
-#[derive(Clone)]
-pub struct RatexFunction {
-    declaration: Box<Stmt>,
-}
-
-impl RatexFunction {
-    pub fn call(
+pub trait RatexCallable {
+    fn call(
         &self,
         interpreter: &mut RatexInterpreter,
-        arguments: Vec<LiteralValue>,
-    ) -> Result<(), RatexError> {
-        let mut environment = Environment::new();
+        arguments: Vec<Object>,
+    ) -> Result<Object, RatexError>;
 
-        match &*self.declaration {
-            Stmt::Fun(f) => {
-                for i in 0..f.params.len() {
-                    environment.define(
-                        f.params.get(i).unwrap().lexeme.clone(),
-                        arguments.get(i).unwrap().clone(),
-                    );
-                }
-
-                interpreter.execute_block(f.body.clone(), environment)?;
-                Ok(())
-            }
-            _ => Err(RatexError {
-                source: RatexErrorType::InvalidFunctionCall,
-            }),
-        }
-    }
-
-    pub fn new(stmt: Stmt) -> Self {
-        RatexFunction {
-            declaration: Box::new(stmt),
-        }
-    }
-
-    pub fn arity(&self) -> Result<usize, RatexError> {
-        match &*self.declaration {
-            Stmt::Fun(f) => Ok(f.params.len()),
-            _ => Err(RatexError {
-                source: RatexErrorType::InvalidFunctionCall,
-            }),
-        }
-    }
+    fn arity(&self) -> Result<usize, RatexError>;
 }
