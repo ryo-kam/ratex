@@ -1,6 +1,9 @@
-use std::fmt::{Display, Formatter, Result};
+use std::{
+    fmt::{Display, Formatter, Result},
+    hash::Hash,
+};
 
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Default, Hash, Eq)]
 pub struct RatexToken {
     pub token_type: RatexTokenType,
     pub lexeme: String,
@@ -84,6 +87,13 @@ pub enum RatexTokenType {
     #[default]
     Break,
     EOF,
+}
+
+impl Eq for RatexTokenType {}
+impl Hash for RatexTokenType {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
 }
 
 impl Display for RatexTokenType {

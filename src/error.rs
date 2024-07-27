@@ -3,7 +3,7 @@ use std::{
     fmt::{Debug, Display, Formatter, Result},
 };
 
-use crate::ast::Object;
+use crate::{ast::Object, token};
 
 #[derive(Debug)]
 pub struct RatexError {
@@ -34,6 +34,10 @@ pub enum RatexErrorType {
     InvalidLogicalOperation(u32),
     InvalidFunctionCall,
     IncompatibleArity,
+    VarInInitialiser,
+    RedeclareLocalVariable(u32),
+
+    // Interrupts
     Break,
     Return(Object),
 }
@@ -41,45 +45,55 @@ pub enum RatexErrorType {
 impl Display for RatexErrorType {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            Self::UnknownToken(line, token) => {
+            RatexErrorType::UnknownToken(line, token) => {
                 write!(f, "line {}, unknown token {}", line, token)
             }
-            Self::UnterminatedBlockComment(line, index) => {
-                write!(f, "line {}, unterminated block comment: {}", line, index)
-            }
-            Self::UnterminatedString(line, string) => {
+            RatexErrorType::UnterminatedString(line, string) => {
                 write!(f, "line {}, unterminated string: {}", line, string)
             }
-            Self::UnexpectedToken(line, token) => {
+            RatexErrorType::UnterminatedBlockComment(line, index) => {
+                write!(f, "line {}, unterminated block comment: {}", line, index)
+            }
+            RatexErrorType::UnexpectedToken(line, token) => {
                 write!(f, "line {}, unexpected token '{}'", line, token)
             }
-            Self::ExpectedToken(line, string) => {
+            RatexErrorType::ExpectedToken(line, string) => {
                 write!(
                     f,
                     "line {}, expected token '{}' but not found",
                     line, string
                 )
             }
-            Self::UndefinedIdentifier(identifier) => {
+            RatexErrorType::UndefinedIdentifier(identifier) => {
                 write!(f, "tried to read undefined variable '{}'", identifier)
             }
-            Self::InvalidAssignment(line) => {
+            RatexErrorType::InvalidAssignment(line) => {
                 write!(f, "line {}, invalid assignment", line)
             }
-            Self::InvalidLogicalOperation(line) => {
+            RatexErrorType::InvalidLogicalOperation(line) => {
                 write!(f, "line {}, invalid logical operation", line)
             }
-            Self::Break => {
-                write!(f, "break statement reached")
-            }
-            Self::InvalidFunctionCall => {
+            RatexErrorType::InvalidFunctionCall => {
                 write!(f, "invalid function call")
             }
-            Self::IncompatibleArity => {
+            RatexErrorType::IncompatibleArity => {
                 write!(f, "too many or too few arguments")
             }
-            Self::Return(_) => {
+            RatexErrorType::VarInInitialiser => {
+                write!(f, "can't read local variable in its own initialiser")
+            }
+            RatexErrorType::Break => {
+                write!(f, "break statement reached")
+            }
+            RatexErrorType::Return(_) => {
                 write!(f, "returned")
+            }
+            RatexErrorType::RedeclareLocalVariable(line) => {
+                write!(
+                    f,
+                    "line {}, there is already a variable with this name",
+                    line
+                )
             }
         }
     }

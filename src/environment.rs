@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, env, rc::Rc};
 
 use crate::{
     ast::Object,
@@ -30,10 +30,6 @@ impl Environment {
         self.values.insert(name, value);
     }
 
-    // pub fn get_enclosing(&self) -> Option<Box<Environment>> {
-    //     self.enclosing.clone()
-    // }
-
     pub fn get(&self, name: String) -> Result<Object, RatexError> {
         match self.values.get(&name) {
             Some(value) => Ok(value.clone()),
@@ -47,6 +43,15 @@ impl Environment {
                 }),
             },
         }
+    }
+
+    pub fn get_at(env: Rc<RefCell<Self>>, distance: usize, name: String) -> Object {
+        Self::ancestor(env, distance)
+            .borrow()
+            .values
+            .get(&name)
+            .unwrap()
+            .clone()
     }
 
     pub fn assign(&mut self, name: String, value: Object) -> Result<(), RatexError> {
@@ -66,5 +71,22 @@ impl Environment {
         }
 
         Ok(())
+    }
+
+    pub fn assign_at(env: Rc<RefCell<Self>>, distance: usize, name: String, value: Object) {
+        Self::ancestor(env, distance)
+            .borrow_mut()
+            .values
+            .insert(name, value);
+    }
+
+    fn ancestor(env: Rc<RefCell<Self>>, distance: usize) -> Rc<RefCell<Self>> {
+        let mut env_ref = Rc::clone(&env);
+
+        for _ in 0..distance {
+            env_ref = Rc::clone(Rc::clone(&env_ref).borrow_mut().enclosing.as_ref().unwrap());
+        }
+
+        return env_ref;
     }
 }

@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::{
@@ -11,8 +12,11 @@ use crate::error::{RatexError, RatexErrorType};
 use crate::functions::{ClockFunction, RatexFunction};
 use crate::token::{RatexToken, RatexTokenType as RXTT};
 
+#[derive(Debug)]
 pub struct RatexInterpreter {
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<Expr, usize>,
+    globals: Rc<RefCell<Environment>>,
 }
 
 impl RatexInterpreter {
@@ -24,13 +28,16 @@ impl RatexInterpreter {
         statement.accept(self)
     }
 
+    pub fn resolve(&mut self, expr: Expr, depth: usize) {
+        self.locals.insert(expr, depth);
+    }
+
     pub fn execute_block(
         &mut self,
         statements: Vec<Stmt>,
         env: Rc<RefCell<Environment>>,
     ) -> Result<(), RatexError> {
         let old_environment = Rc::clone(&self.environment);
-
         self.environment = env;
 
         for statement in statements {
@@ -63,14 +70,34 @@ impl RatexInterpreter {
         Ok(())
     }
 
-    pub fn new() -> Self {
-        let environment = Environment::new();
+    pub fn new() -> Rc<RefCell<Self>> {
+        let globals = Environment::new();
 
-        environment
+        globals
             .borrow_mut()
             .define("clock".to_string(), Object::Function(ClockFunction::new()));
 
-        RatexInterpreter { environment }
+        let environment = Rc::clone(&globals);
+
+        Rc::new(RefCell::new(RatexInterpreter {
+            environment,
+            locals: HashMap::new(),
+            globals,
+        }))
+    }
+
+    fn look_up_variable(&self, name: RatexToken, expr: Expr) -> Result<Object, RatexError> {
+        let res = self.locals.get(&expr);
+
+        if let Some(distance) = res {
+            Ok(Environment::get_at(
+                Rc::clone(&self.environment),
+                *distance,
+                name.lexeme,
+            ))
+        } else {
+            Ok(self.globals.borrow().get(name.lexeme)?)
+        }
     }
 }
 
@@ -163,23 +190,25 @@ impl ExprVisitor<Object> for RatexInterpreter {
     }
 
     fn visit_variable(&mut self, target: &Variable) -> Result<Object, RatexError> {
-        match &target.name.token_type {
-            RXTT::Identifier => Ok(self
-                .environment
-                .borrow()
-                .get(target.name.lexeme.clone())?
-                .clone()),
-            _ => Err(RatexError {
-                source: RatexErrorType::ExpectedToken(target.name.line, "Identifier".to_owned()),
-            }),
-        }
+        return self.look_up_variable(target.name.clone(), Expr::Variable(target.clone()));
     }
 
     fn visit_assign(&mut self, target: &Assign) -> Result<Object, RatexError> {
         let value = self.evaluate(target.value.clone())?;
-        self.environment
-            .borrow_mut()
-            .assign(target.name.lexeme.clone(), value.clone())?;
+        let distance = self.locals.get(&Expr::Assign(target.clone()));
+
+        if let Some(d) = distance {
+            Environment::assign_at(
+                Rc::clone(&self.environment),
+                *d,
+                target.name.lexeme.clone(),
+                value.clone(),
+            );
+        } else {
+            self.environment
+                .borrow_mut()
+                .assign(target.name.lexeme.clone(), value.clone())?;
+        }
         Ok(value)
     }
 
@@ -231,6 +260,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
 impl StmtVisitor<()> for RatexInterpreter {
     fn visit_block(&mut self, target: &Block) -> Result<(), RatexError> {
         let block_env = Environment::new_child(Rc::clone(&self.environment));
+
         self.execute_block(target.statements.clone(), block_env)?;
 
         Ok(())
@@ -256,7 +286,10 @@ impl StmtVisitor<()> for RatexInterpreter {
     fn visit_fun(&mut self, target: &Fun) -> Result<(), RatexError> {
         let stmt = Stmt::Fun(target.clone());
 
-        let function = Object::Function(RatexFunction::new(stmt, Rc::clone(&self.environment)));
+        let function = Object::Function(RatexFunction::new(
+            stmt,
+            Environment::new_child(Rc::clone(&self.environment)),
+        ));
 
         self.environment
             .borrow_mut()

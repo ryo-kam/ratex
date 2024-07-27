@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display, Formatter};
+use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::ast::ast_macro::ast_derive;
@@ -29,6 +30,14 @@ impl Object {
     }
 }
 
+impl Hash for Object {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        core::mem::discriminant(self).hash(state);
+    }
+}
+
+impl Eq for Object {}
+
 impl Clone for Object {
     fn clone(&self) -> Self {
         match self {
@@ -37,6 +46,19 @@ impl Clone for Object {
             Object::Number(n) => Object::Number(n.clone()),
             Object::Function(f) => Object::Function(Rc::clone(&f)),
             Object::Nil => Object::Nil,
+        }
+    }
+}
+
+impl PartialEq for Object {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Object::Bool(b1), Object::Bool(b2)) => b1 == b2,
+            (Object::String(s1), Object::String(s2)) => s1 == s2,
+            (Object::Number(n1), Object::Number(n2)) => n1 == n2,
+            (Object::Function(f1), Object::Function(f2)) => Rc::ptr_eq(f1, f2),
+            (Object::Nil, Object::Nil) => true,
+            _ => false,
         }
     }
 }

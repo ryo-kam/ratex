@@ -1,6 +1,7 @@
 use std::{
     env,
     io::{self, Write},
+    rc::Rc,
 };
 
 mod ast;
@@ -9,12 +10,14 @@ mod error;
 mod functions;
 mod interpreter;
 mod parser;
+mod resolver;
 mod scanner;
 mod token;
 
 use ast::Stmt;
 use interpreter::RatexInterpreter;
 use parser::Parser;
+use resolver::Resolver;
 use scanner::Scanner;
 
 use crate::error::RatexError;
@@ -56,7 +59,7 @@ fn run_file(path: String) {
 
 fn run_prompt() -> Result<(), RatexError> {
     println!("Prompt mode");
-    let mut interpreter = RatexInterpreter::new();
+    let interpreter = RatexInterpreter::new();
 
     loop {
         let mut prompt = String::new();
@@ -77,11 +80,16 @@ fn run_prompt() -> Result<(), RatexError> {
         if !parser.has_error() {
             for statement in ast {
                 match statement {
-                    Stmt::Expression(expr) => match interpreter.evaluate(expr.expr) {
-                        Ok(value) => println!("{}", value),
-                        Err(e) => println!("Error: {}", e),
-                    },
-                    _ => match interpreter.interpret(vec![statement]) {
+                    Stmt::Expression(expr) => {
+                        match Rc::clone(&interpreter).borrow_mut().evaluate(expr.expr) {
+                            Ok(value) => println!("{}", value),
+                            Err(e) => println!("Error: {}", e),
+                        }
+                    }
+                    _ => match Rc::clone(&interpreter)
+                        .borrow_mut()
+                        .interpret(vec![statement])
+                    {
                         Ok(()) => {}
                         Err(e) => println!("Error: {}", e),
                     },
@@ -103,8 +111,11 @@ fn run(code: String) {
     if parser.has_error() {
         println!("Code won't be executed since it has errors.");
     } else {
-        let mut interpreter = RatexInterpreter::new();
-        match interpreter.interpret(ast) {
+        let interpreter = RatexInterpreter::new();
+        let mut resolver = Resolver::new(Rc::clone(&interpreter));
+        let _ = resolver.resolve_list(ast.clone());
+
+        match Rc::clone(&interpreter).borrow_mut().interpret(ast) {
             Ok(()) => {}
             Err(e) => println!("Error: {}", e),
         }

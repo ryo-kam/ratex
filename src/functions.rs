@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    fmt::Debug,
     rc::Rc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -11,10 +12,28 @@ use crate::{
     interpreter::RatexInterpreter,
 };
 
-#[derive(Debug)]
 pub struct RatexFunction {
     declaration: Box<Stmt>,
     closure: Rc<RefCell<Environment>>,
+}
+
+impl Debug for RatexFunction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Stmt::Fun(fun) = &*self.declaration {
+            let mut closure_placeholder = self.closure.borrow().clone();
+
+            closure_placeholder
+                .assign(fun.name.lexeme.clone(), Object::Nil)
+                .unwrap();
+
+            f.debug_struct("RatexFunction")
+                .field("declaration", &*self.declaration)
+                .field("closure", &closure_placeholder)
+                .finish()
+        } else {
+            panic!("Function not found");
+        }
+    }
 }
 
 impl RatexCallable for RatexFunction {
