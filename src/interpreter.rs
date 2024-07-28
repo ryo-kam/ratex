@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::ast::{
-    Assign, Binary, Block, Break, Call, Expr, ExprAccept, ExprVisitor, Expression, Fun, Grouping,
-    If, Lambda, Literal, Logical, Object, Print, Return, Stmt, StmtAccept, StmtVisitor, Unary, Var,
-    Variable, While,
+    Assign, Binary, Block, Break, Call, Class, Expr, ExprAccept, ExprVisitor, Expression, Fun, Get,
+    Grouping, If, Lambda, Literal, Logical, Object, Print, RatexCallable, Return, Set, Stmt,
+    StmtAccept, StmtVisitor, Unary, Var, Variable, While,
 };
+use crate::class::RatexClass;
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
 use crate::functions::{ClockFunction, RatexFunction};
@@ -221,22 +222,27 @@ impl ExprVisitor<Object> for RatexInterpreter {
             arguments.push(self.evaluate(Box::new(argument.clone()))?);
         }
 
-        if let Object::Function(fun) = callee {
-            if arguments.len() == fun.arity()? {
-                match fun.call(self, arguments) {
-                    Ok(obj) => return Ok(obj),
-                    Err(e) => {
-                        if let RatexErrorType::Return(obj) = e.source {
-                            return Ok(obj);
+        match callee {
+            Object::Function(fun) => {
+                if arguments.len() == fun.arity()? {
+                    match fun.call(self, arguments) {
+                        Ok(obj) => return Ok(obj),
+                        Err(e) => {
+                            if let RatexErrorType::Return(obj) = e.source {
+                                return Ok(obj);
+                            }
+                            return Err(e);
                         }
-                        return Err(e);
                     }
+                } else {
+                    return Err(RatexError {
+                        source: RatexErrorType::IncompatibleArity,
+                    });
                 }
-            } else {
-                return Err(RatexError {
-                    source: RatexErrorType::IncompatibleArity,
-                });
             }
+            Object::Class(klass) => return Ok(klass.call(self, arguments)?),
+            Object::Instance(instance) => {}
+            _ => {}
         }
 
         Err(RatexError {
@@ -251,9 +257,40 @@ impl ExprVisitor<Object> for RatexInterpreter {
             body: target.body.clone(),
         });
 
-        let function = Object::Function(RatexFunction::new(stmt, Rc::clone(&self.environment)));
+        let function = Object::Function(RatexFunction::new(
+            "anonymous".to_string(),
+            stmt,
+            Rc::clone(&self.environment),
+        ));
 
         Ok(function)
+    }
+
+    fn visit_get(&mut self, target: &Get) -> Result<Object, RatexError> {
+        let obj = self.evaluate(target.object.clone())?;
+        if let Object::Instance(instance) = obj {
+            return Ok(instance.borrow().get(target.name.lexeme.clone())?);
+        }
+
+        Err(RatexError {
+            source: RatexErrorType::InvalidFunctionCall,
+        })
+    }
+
+    fn visit_set(&mut self, target: &Set) -> Result<Object, RatexError> {
+        let object = self.evaluate(target.object.clone())?;
+
+        if let Object::Instance(instance) = object {
+            let value = self.evaluate(target.value.clone())?;
+            instance
+                .borrow_mut()
+                .set(target.name.lexeme.clone(), value.clone());
+            Ok(value)
+        } else {
+            Err(RatexError {
+                source: RatexErrorType::NonInstanceSet,
+            })
+        }
     }
 }
 
@@ -287,6 +324,7 @@ impl StmtVisitor<()> for RatexInterpreter {
         let stmt = Stmt::Fun(target.clone());
 
         let function = Object::Function(RatexFunction::new(
+            target.name.lexeme.clone(),
             stmt,
             Environment::new_child(Rc::clone(&self.environment)),
         ));
@@ -349,6 +387,17 @@ impl StmtVisitor<()> for RatexInterpreter {
             }
         }
 
+        Ok(())
+    }
+
+    fn visit_class(&mut self, target: &Class) -> Result<(), RatexError> {
+        self.environment
+            .borrow_mut()
+            .define(target.name.lexeme.clone(), Object::Nil);
+        let klass = RatexClass::new(target.name.lexeme.clone());
+        self.environment
+            .borrow_mut()
+            .assign(target.name.lexeme.clone(), Object::Class(klass))?;
         Ok(())
     }
 }

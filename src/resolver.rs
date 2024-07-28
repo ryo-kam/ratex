@@ -6,16 +6,16 @@ use std::{
 
 use crate::{
     ast::{
-        Assign, Binary, Block, Break, Call, Expr, ExprAccept, ExprVisitor, Expression, Fun,
-        Grouping, If, Lambda, Literal, Logical, Print, Return, Stmt, StmtAccept, StmtVisitor,
-        Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Call, Class, Expr, ExprAccept, ExprVisitor, Expression, Fun,
+        Get, Grouping, If, Lambda, Literal, Logical, Print, Return, Set, Stmt, StmtAccept,
+        StmtVisitor, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
     interpreter::RatexInterpreter,
     token::RatexToken as RXT,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FunctionType {
     Function,
     None,
@@ -106,7 +106,10 @@ impl Resolver {
         }
     }
 
-    fn resolve_function(&mut self, fun: Fun) -> Result<(), RatexError> {
+    fn resolve_function(&mut self, fun: Fun, func_type: FunctionType) -> Result<(), RatexError> {
+        let enclosing_function = self.current_function.clone();
+        self.current_function = func_type;
+
         self.begin_scope();
 
         for param in fun.params {
@@ -116,6 +119,8 @@ impl Resolver {
 
         self.resolve_list(fun.body)?;
         self.end_scope();
+
+        self.current_function = enclosing_function;
 
         Ok(())
     }
@@ -149,21 +154,23 @@ impl ExprVisitor<()> for Resolver {
     }
 
     fn visit_variable(&mut self, target: &Variable) -> Result<(), RatexError> {
-        if let Some(b) = self
-            .scopes
-            .back()
-            .unwrap()
-            .borrow()
-            .get(&target.name.lexeme)
-        {
-            if !b {
-                return Err(RatexError {
-                    source: RatexErrorType::Break,
-                });
+        if self.scopes.len() > 0 {
+            if let Some(b) = self
+                .scopes
+                .back()
+                .unwrap()
+                .borrow()
+                .get(&target.name.lexeme)
+            {
+                if !b {
+                    return Err(RatexError {
+                        source: RatexErrorType::Break,
+                    });
+                }
             }
-        }
 
-        self.resolve_local(Expr::Variable(target.clone()), &target.name);
+            self.resolve_local(Expr::Variable(target.clone()), &target.name);
+        }
 
         Ok(())
     }
@@ -188,6 +195,17 @@ impl ExprVisitor<()> for Resolver {
         for statement in &target.body {
             self.resolve_stmt(statement.clone())?;
         }
+        Ok(())
+    }
+
+    fn visit_get(&mut self, target: &Get) -> Result<(), RatexError> {
+        self.resolve_expr(*target.object.clone())?;
+        Ok(())
+    }
+
+    fn visit_set(&mut self, target: &Set) -> Result<(), RatexError> {
+        self.resolve_expr(*target.value.clone());
+        self.resolve_expr(*target.object.clone());
         Ok(())
     }
 }
@@ -219,7 +237,7 @@ impl StmtVisitor<()> for Resolver {
     fn visit_fun(&mut self, target: &Fun) -> Result<(), RatexError> {
         self.declare(target.name.clone())?;
         self.define(target.name.clone());
-        self.resolve_function(target.clone())?;
+        self.resolve_function(target.clone(), FunctionType::Function)?;
         Ok(())
     }
 
@@ -240,6 +258,12 @@ impl StmtVisitor<()> for Resolver {
     }
 
     fn visit_return(&mut self, target: &Return) -> Result<(), RatexError> {
+        if let FunctionType::None = self.current_function {
+            return Err(RatexError {
+                source: RatexErrorType::InvalidReturnLocation,
+            });
+        }
+
         if *target.value != Expr::Empty {
             self.resolve_expr(*target.value.clone())?;
         }
@@ -256,6 +280,12 @@ impl StmtVisitor<()> for Resolver {
 
         self.define(target.name.clone());
 
+        Ok(())
+    }
+
+    fn visit_class(&mut self, target: &Class) -> Result<(), RatexError> {
+        self.declare(target.name.clone())?;
+        self.define(target.name.clone());
         Ok(())
     }
 }

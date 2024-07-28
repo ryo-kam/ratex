@@ -5,6 +5,7 @@ use std::{
 };
 
 mod ast;
+mod class;
 mod environment;
 mod error;
 mod functions;

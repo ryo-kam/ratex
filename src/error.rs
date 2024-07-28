@@ -24,6 +24,11 @@ impl Error for RatexError {
 
 #[derive(Debug)]
 pub enum RatexErrorType {
+    // Interrupts
+    Break,
+    Return(Object),
+
+    // Errors
     UnknownToken(u32, String),
     UnterminatedString(u32, String),
     UnterminatedBlockComment(u32, String),
@@ -36,10 +41,9 @@ pub enum RatexErrorType {
     IncompatibleArity,
     VarInInitialiser,
     RedeclareLocalVariable(u32),
-
-    // Interrupts
-    Break,
-    Return(Object),
+    InvalidReturnLocation,
+    AccessUnknownField(String),
+    NonInstanceSet,
 }
 
 impl Display for RatexErrorType {
@@ -95,6 +99,11 @@ impl Display for RatexErrorType {
                     line
                 )
             }
+            RatexErrorType::InvalidReturnLocation => write!(f, "return called outside a function"),
+            RatexErrorType::AccessUnknownField(s) => {
+                write!(f, "tried to access unknown field \"{s}\"")
+            }
+            RatexErrorType::NonInstanceSet => write!(f, "only class instance have fields"),
         }
     }
 }

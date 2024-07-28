@@ -1,10 +1,9 @@
 use crate::{
     ast::{
-        Assign, Binary, Block, Break, Call, Expr, Expression, Fun, Grouping, If, Lambda, Literal,
-        Logical, Object, Print, Return, Stmt, Unary, Var, Variable, While,
+        Assign, Binary, Block, Break, Call, Class, Expr, Expression, Fun, Get, Grouping, If,
+        Lambda, Literal, Logical, Object, Print, Return, Set, Stmt, Unary, Var, Variable, While,
     },
     error::{RatexError, RatexErrorType},
-    functions::RatexFunction,
     token::{RatexToken as RXT, RatexTokenType as RXTT},
 };
 
@@ -138,6 +137,12 @@ impl Parser {
         loop {
             if self.match_token(vec![RXTT::LeftParen]) {
                 expr = self.finish_call(expr)?;
+            } else if self.match_token(vec![RXTT::Dot]) {
+                let name = self.consume(RXTT::Identifier)?;
+                expr = Expr::Get(Get {
+                    object: Box::new(expr),
+                    name: name.clone(),
+                })
             } else {
                 break;
             }
@@ -253,6 +258,10 @@ impl Parser {
     }
 
     fn statement(&mut self) -> Result<Stmt, RatexError> {
+        if self.match_token(vec![RXTT::Class]) {
+            return self.class_declaration();
+        }
+
         if self.match_token(vec![RXTT::Return]) {
             return self.return_statement();
         }
@@ -391,6 +400,13 @@ impl Parser {
                         name,
                         value: Box::new(value),
                     }));
+                }
+                Expr::Get(get) => {
+                    return Ok(Expr::Set(Set {
+                        object: get.object,
+                        name: get.name,
+                        value: Box::new(self.assignment()?),
+                    }))
                 }
                 _ => {
                     return Err(RatexError {
@@ -625,5 +641,20 @@ impl Parser {
             params: parameters,
             body,
         }))
+    }
+
+    fn class_declaration(&mut self) -> Result<Stmt, RatexError> {
+        let name = self.consume(RXTT::Identifier)?.clone();
+        self.consume(RXTT::LeftBrace)?;
+
+        let mut methods = Vec::new();
+
+        while !self.check(&RXTT::RightBrace) && !self.is_at_end() {
+            methods.push(self.function_statement()?);
+        }
+
+        self.consume(RXTT::RightBrace)?;
+
+        Ok(Stmt::Class(Class { name, methods }))
     }
 }

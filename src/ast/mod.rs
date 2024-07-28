@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::rc::Rc;
 
 use crate::ast::ast_macro::ast_derive;
+use crate::class::{RatexClass, RatexInstance};
 use crate::interpreter::RatexInterpreter;
 use crate::token::RatexToken;
 use crate::RatexError;
@@ -15,6 +17,8 @@ pub enum Object {
     String(String),
     Number(f64),
     Function(Rc<dyn RatexCallable>),
+    Class(RatexClass),
+    Instance(Rc<RefCell<RatexInstance>>),
     Nil,
 }
 
@@ -25,6 +29,8 @@ impl Object {
             Object::String(s) => return s.len() > 0,
             Object::Number(n) => return *n != 0.0,
             Object::Function(_) => return true,
+            Object::Class(_) => return true,
+            Object::Instance(_) => return true,
             Object::Nil => return false,
         }
     }
@@ -45,6 +51,8 @@ impl Clone for Object {
             Object::String(s) => Object::String(s.clone()),
             Object::Number(n) => Object::Number(n.clone()),
             Object::Function(f) => Object::Function(Rc::clone(&f)),
+            Object::Class(c) => Object::Class(c.clone()),
+            Object::Instance(i) => Object::Instance(i.clone()),
             Object::Nil => Object::Nil,
         }
     }
@@ -57,6 +65,8 @@ impl PartialEq for Object {
             (Object::String(s1), Object::String(s2)) => s1 == s2,
             (Object::Number(n1), Object::Number(n2)) => n1 == n2,
             (Object::Function(f1), Object::Function(f2)) => Rc::ptr_eq(f1, f2),
+            (Object::Class(c1), Object::Class(c2)) => c1 == c2,
+            (Object::Instance(i1), Object::Instance(i2)) => i1 == i2,
             (Object::Nil, Object::Nil) => true,
             _ => false,
         }
@@ -66,19 +76,22 @@ impl PartialEq for Object {
 ast_derive! {
     Expr,
     Binary(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
-    Unary(operator: RatexToken, right: Box<Expr>),
     Logical(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
+    Set(object: Box<Expr>, name: RatexToken, value: Box<Expr>),
+    Unary(operator: RatexToken, right: Box<Expr>),
     Literal(value: Object),
     Grouping(expr: Box<Expr>),
     Variable(name: RatexToken),
     Assign(name: RatexToken, value: Box<Expr>),
     Call(callee: Box<Expr>, paren: RatexToken, arguments: Vec<Expr>),
+    Get(object: Box<Expr>, name: RatexToken),
     Lambda(params: Vec<RatexToken>, body: Vec<Stmt>)
 }
 
 ast_derive! {
     Stmt,
     Block(statements: Vec<Stmt>),
+    Class(name: RatexToken, methods: Vec<Stmt>),
     Expression(expr: Box<Expr>),
     If(condition: Box<Expr>, then_stmt: Box<Stmt>, else_stmt: Box<Stmt>),
     Fun(name: RatexToken, params: Vec<RatexToken>, body: Vec<Stmt>),
@@ -95,7 +108,9 @@ impl Display for Object {
             Object::Bool(b) => write!(f, "{b}"),
             Object::String(s) => write!(f, "{s}"),
             Object::Number(n) => write!(f, "{n}"),
-            Object::Function(_) => write!(f, ""),
+            Object::Function(fun) => write!(f, "<function {}>", fun.name()),
+            Object::Class(c) => write!(f, "<class {}>", c.name()),
+            Object::Instance(i) => write!(f, "<{} class instance>", i.borrow().name()),
             Object::Nil => write!(f, "Nil"),
         }
     }
@@ -109,4 +124,6 @@ pub trait RatexCallable: Debug {
     ) -> Result<Object, RatexError>;
 
     fn arity(&self) -> Result<usize, RatexError>;
+
+    fn name(&self) -> String;
 }

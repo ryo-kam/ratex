@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub struct RatexFunction {
+    name: String,
     declaration: Box<Stmt>,
     closure: Rc<RefCell<Environment>>,
 }
@@ -68,11 +69,16 @@ impl RatexCallable for RatexFunction {
             }),
         }
     }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 impl RatexFunction {
-    pub fn new(stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<Self> {
+    pub fn new(name: String, stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<Self> {
         Rc::new(RatexFunction {
+            name,
             closure,
             declaration: Box::new(stmt),
         })
@@ -94,6 +100,10 @@ impl RatexCallable for ClockFunction {
 
     fn arity(&self) -> Result<usize, RatexError> {
         Ok(0)
+    }
+
+    fn name(&self) -> String {
+        "clock".to_string()
     }
 }
 
