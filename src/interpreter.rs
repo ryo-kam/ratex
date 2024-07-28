@@ -394,10 +394,26 @@ impl StmtVisitor<()> for RatexInterpreter {
         self.environment
             .borrow_mut()
             .define(target.name.lexeme.clone(), Object::Nil);
-        let klass = RatexClass::new(target.name.lexeme.clone());
+
+        let mut methods = HashMap::new();
+
+        for method in &target.methods {
+            if let Stmt::Fun(fun) = method {
+                let function = RatexFunction::new(
+                    fun.name.lexeme.clone(),
+                    method.clone(),
+                    Environment::new_child(Rc::clone(&self.environment)),
+                );
+                methods.insert(fun.name.lexeme.clone(), function);
+            }
+        }
+
+        let klass = RatexClass::new(target.name.lexeme.clone(), methods);
+
         self.environment
             .borrow_mut()
             .assign(target.name.lexeme.clone(), Object::Class(klass))?;
+
         Ok(())
     }
 }

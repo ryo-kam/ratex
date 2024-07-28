@@ -12,6 +12,7 @@ use crate::{
     interpreter::RatexInterpreter,
 };
 
+#[derive(PartialEq, Clone)]
 pub struct RatexFunction {
     name: String,
     declaration: Box<Stmt>,

@@ -3,27 +3,33 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::{
     ast::{Object, RatexCallable},
     error::{RatexError, RatexErrorType},
+    functions::RatexFunction,
     interpreter::RatexInterpreter,
-    token::RatexToken,
 };
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct RatexClass {
     name: String,
+    methods: HashMap<String, Rc<RatexFunction>>,
 }
 
 impl RatexClass {
-    pub fn new(name: String) -> Self {
-        RatexClass { name }
+    pub fn new(name: String, methods: HashMap<String, Rc<RatexFunction>>) -> Self {
+        RatexClass { name, methods }
+    }
+
+    fn find_method(&self, name: &String) -> Option<Object> {
+        if let Some(method) = self.methods.get(name) {
+            let func = Rc::clone(method);
+            return Some(Object::Function(func));
+        }
+
+        None
     }
 }
 
 impl RatexCallable for RatexClass {
-    fn call(
-        &self,
-        interpreter: &mut RatexInterpreter,
-        arguments: Vec<Object>,
-    ) -> Result<Object, RatexError> {
+    fn call(&self, _: &mut RatexInterpreter, _: Vec<Object>) -> Result<Object, RatexError> {
         Ok(Object::Instance(RatexInstance::new(self.clone())))
     }
 
@@ -55,14 +61,17 @@ impl RatexInstance {
     }
 
     pub fn get(&self, name: String) -> Result<Object, RatexError> {
-        match self.fields.get(&name) {
-            Some(value) => return Ok(value.clone()),
-            None => {
-                return Err(RatexError {
-                    source: RatexErrorType::AccessUnknownField(name),
-                })
-            }
+        if let Some(value) = self.fields.get(&name) {
+            return Ok(value.clone());
         }
+
+        if let Some(method) = self.klass.find_method(&name) {
+            return Ok(method);
+        }
+
+        Err(RatexError {
+            source: RatexErrorType::AccessUnknownField(name),
+        })
     }
 
     pub fn set(&mut self, name: String, value: Object) {

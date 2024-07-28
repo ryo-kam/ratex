@@ -19,6 +19,7 @@ use crate::{
 pub enum FunctionType {
     Function,
     None,
+    Method,
 }
 
 #[derive(Debug)]
@@ -204,8 +205,8 @@ impl ExprVisitor<()> for Resolver {
     }
 
     fn visit_set(&mut self, target: &Set) -> Result<(), RatexError> {
-        self.resolve_expr(*target.value.clone());
-        self.resolve_expr(*target.object.clone());
+        self.resolve_expr(*target.value.clone())?;
+        self.resolve_expr(*target.object.clone())?;
         Ok(())
     }
 }
@@ -286,6 +287,13 @@ impl StmtVisitor<()> for Resolver {
     fn visit_class(&mut self, target: &Class) -> Result<(), RatexError> {
         self.declare(target.name.clone())?;
         self.define(target.name.clone());
+
+        for method in &target.methods {
+            if let Stmt::Fun(fun) = method {
+                let declaration = FunctionType::Method;
+                self.resolve_function(fun.clone(), declaration)?;
+            }
+        }
         Ok(())
     }
 }
