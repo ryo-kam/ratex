@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     env,
     io::{self, Write},
     rc::Rc,
@@ -76,13 +77,16 @@ fn run_prompt() -> Result<(), RatexError> {
 
         let mut parser = Parser::new(tokens);
 
-        let ast: Vec<Stmt> = parser.parse();
+        let ast = parser.parse();
 
         if !parser.has_error() {
             for statement in ast {
-                match statement {
+                match statement.borrow() {
                     Stmt::Expression(expr) => {
-                        match Rc::clone(&interpreter).borrow_mut().evaluate(expr.expr) {
+                        match Rc::clone(&interpreter)
+                            .borrow_mut()
+                            .evaluate(Rc::clone(&expr.expr))
+                        {
                             Ok(value) => println!("{}", value),
                             Err(e) => println!("Error: {}", e),
                         }
@@ -107,14 +111,14 @@ fn run(code: String) {
 
     let mut parser = Parser::new(tokens);
 
-    let ast: Vec<Stmt> = parser.parse();
+    let ast = parser.parse();
 
     if parser.has_error() {
         println!("Code won't be executed since it has errors.");
     } else {
         let interpreter = RatexInterpreter::new();
         let mut resolver = Resolver::new(Rc::clone(&interpreter));
-        let _ = resolver.resolve_list(ast.clone());
+        let _ = resolver.resolve_list(&ast.clone());
 
         match Rc::clone(&interpreter).borrow_mut().interpret(ast) {
             Ok(()) => {}

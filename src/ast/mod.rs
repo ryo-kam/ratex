@@ -75,32 +75,32 @@ impl PartialEq for Object {
 
 ast_derive! {
     Expr,
-    Binary(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
-    Logical(left: Box<Expr>, operator: RatexToken, right: Box<Expr>),
-    Set(object: Box<Expr>, name: RatexToken, value: Box<Expr>),
+    Binary(left: Rc<Expr>, operator: RatexToken, right: Rc<Expr>),
+    Logical(left: Rc<Expr>, operator: RatexToken, right: Rc<Expr>),
+    Set(object: Rc<Expr>, name: RatexToken, value: Rc<Expr>),
     This(keyword: RatexToken),
-    Unary(operator: RatexToken, right: Box<Expr>),
+    Unary(operator: RatexToken, right: Rc<Expr>),
     Literal(value: Object),
-    Grouping(expr: Box<Expr>),
+    Grouping(expr: Rc<Expr>),
     Variable(name: RatexToken),
-    Assign(name: RatexToken, value: Box<Expr>),
-    Call(callee: Box<Expr>, paren: RatexToken, arguments: Vec<Expr>),
-    Get(object: Box<Expr>, name: RatexToken),
-    Lambda(params: Vec<RatexToken>, body: Vec<Stmt>)
+    Assign(name: RatexToken, value: Rc<Expr>),
+    Call(callee: Rc<Expr>, paren: RatexToken, arguments: Vec<Rc<Expr>>),
+    Get(object: Rc<Expr>, name: RatexToken),
+    Lambda(params: Vec<RatexToken>, body: Vec<Rc<Stmt>>)
 }
 
 ast_derive! {
     Stmt,
-    Block(statements: Vec<Stmt>),
-    Class(name: RatexToken, methods: Vec<Stmt>),
-    Expression(expr: Box<Expr>),
-    If(condition: Box<Expr>, then_stmt: Box<Stmt>, else_stmt: Box<Stmt>),
-    Fun(name: RatexToken, params: Vec<RatexToken>, body: Vec<Stmt>),
-    While(condition: Box<Expr>, body: Box<Stmt>),
+    Block(statements: Vec<Rc<Stmt>>),
+    Class(name: RatexToken, methods: Vec<Rc<Stmt>>),
+    Expression(expr: Rc<Expr>),
+    If(condition: Rc<Expr>, then_stmt: Rc<Stmt>, else_stmt: Rc<Stmt>),
+    Fun(name: RatexToken, params: Vec<RatexToken>, body: Vec<Rc<Stmt>>),
+    While(condition: Rc<Expr>, body: Rc<Stmt>),
     Break(),
-    Print(expr: Box<Expr>),
-    Return(keyword: RatexToken, value: Box<Expr>),
-    Var(name: RatexToken, initialiser: Box<Expr>)
+    Print(expr: Rc<Expr>),
+    Return(keyword: RatexToken, value: Rc<Expr>),
+    Var(name: RatexToken, initialiser: Rc<Expr>)
 }
 
 impl Display for Object {

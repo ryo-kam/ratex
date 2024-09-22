@@ -22,7 +22,7 @@ impl Environment {
     pub fn new_child(parent: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
         Rc::new(RefCell::new(Environment {
             values: HashMap::new(),
-            enclosing: Some(parent),
+            enclosing: Some(parent.clone()),
         }))
     }
 
@@ -47,7 +47,10 @@ impl Environment {
 
     pub fn get_at(env: Rc<RefCell<Self>>, distance: usize, name: String) -> Object {
         println!("{}", name.clone());
-        println!("{:?}", env.borrow());
+        println!("{:?}", env.clone().borrow().values.get(&name));
+        println!("{}", distance);
+        println!("{:?}", Self::ancestor(env.clone(), distance));
+
         Self::ancestor(env, distance)
             .borrow()
             .values

@@ -16,7 +16,7 @@ use crate::{
 #[derive(PartialEq, Clone)]
 pub struct RatexFunction {
     name: String,
-    declaration: Box<Stmt>,
+    declaration: Rc<Stmt>,
     closure: Rc<RefCell<Environment>>,
 }
 
@@ -78,16 +78,20 @@ impl RatexCallable for RatexFunction {
 }
 
 impl RatexFunction {
-    pub fn new(name: String, stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
+    pub fn new(
+        name: String,
+        declaration: Rc<Stmt>,
+        closure: Rc<RefCell<Environment>>,
+    ) -> Rc<RefCell<RatexFunction>> {
         Rc::new(RefCell::new(RatexFunction {
             name,
             closure,
-            declaration: Box::new(stmt),
+            declaration,
         }))
     }
 
     pub fn bind(&mut self, instance: RatexInstance) {
-        let env = Environment::new_child(self.closure.clone());
+        let env = Environment::new_child(Rc::clone(&self.closure));
         env.borrow_mut().define(
             "this".to_owned(),
             Object::Instance(Rc::new(RefCell::new(instance))),

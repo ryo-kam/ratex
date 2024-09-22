@@ -5,7 +5,7 @@ macro_rules! ast_derive {
             pub enum $name {
                 Empty,
                 $(
-                    $type($type)
+                    $type(Rc<$type>)
                 ),+
             }
 
@@ -16,11 +16,27 @@ macro_rules! ast_derive {
                         pub $prop: $class
                     ),*
                 }
+
+                impl $type {
+                    pub fn new(
+                        $(
+                            $prop: $class
+                        ),*
+                    ) -> Rc<$name> {
+                        return Rc::new(
+                            $name::$type(
+                                Rc::new(
+                                    $type {$($prop: $prop),*}
+                                )
+                            )
+                        )
+                    }
+                }
             )+
 
             pub trait [<$name Visitor>]<R> {
                 $(
-                        fn [<visit_ $type:snake>] (&mut self, target: &$type) -> Result<R, RatexError>;
+                        fn [<visit_ $type:snake>] (&mut self, target: Rc<$type>) -> Result<R, RatexError>;
 
                 )+
             }
@@ -37,7 +53,7 @@ macro_rules! ast_derive {
                         }
 
                         $(
-                            $name::$type(x) => visitor.[<visit_ $type:snake>](x)
+                            $name::$type(x) => visitor.[<visit_ $type:snake>](Rc::clone(x))
                         ),+
                     }
                 }
@@ -46,7 +62,7 @@ macro_rules! ast_derive {
             $(
                 impl<R> [<$name Accept>]<R> for $type {
                     fn accept<V: [<$name Visitor>]<R>>(&self, visitor: &mut V) -> Result<R, RatexError> {
-                        visitor.[<visit_ $type:snake>](self)
+                        visitor.[<visit_ $type:snake>](Rc::new(self.clone()))
                     }
                 }
             )+
