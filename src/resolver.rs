@@ -209,6 +209,11 @@ impl ExprVisitor<()> for Resolver {
         self.resolve_expr(*target.object.clone())?;
         Ok(())
     }
+
+    fn visit_this(&mut self, target: &crate::ast::This) -> Result<(), RatexError> {
+        self.resolve_local(Expr::This(target.clone()), &target.keyword);
+        Ok(())
+    }
 }
 
 impl StmtVisitor<()> for Resolver {
@@ -288,12 +293,21 @@ impl StmtVisitor<()> for Resolver {
         self.declare(target.name.clone())?;
         self.define(target.name.clone());
 
+        self.begin_scope();
+        self.scopes
+            .back()
+            .unwrap()
+            .borrow_mut()
+            .insert("this".to_string(), true);
+
         for method in &target.methods {
             if let Stmt::Fun(fun) = method {
                 let declaration = FunctionType::Method;
                 self.resolve_function(fun.clone(), declaration)?;
             }
         }
+
+        self.end_scope();
         Ok(())
     }
 }

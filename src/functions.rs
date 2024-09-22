@@ -7,6 +7,7 @@ use std::{
 
 use crate::{
     ast::{Object, RatexCallable, Stmt},
+    class::RatexInstance,
     environment::Environment,
     error::{RatexError, RatexErrorType},
     interpreter::RatexInterpreter,
@@ -77,12 +78,22 @@ impl RatexCallable for RatexFunction {
 }
 
 impl RatexFunction {
-    pub fn new(name: String, stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<Self> {
-        Rc::new(RatexFunction {
+    pub fn new(name: String, stmt: Stmt, closure: Rc<RefCell<Environment>>) -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(RatexFunction {
             name,
             closure,
             declaration: Box::new(stmt),
-        })
+        }))
+    }
+
+    pub fn bind(&mut self, instance: RatexInstance) {
+        let env = Environment::new_child(self.closure.clone());
+        env.borrow_mut().define(
+            "this".to_owned(),
+            Object::Instance(Rc::new(RefCell::new(instance))),
+        );
+
+        self.closure = env;
     }
 }
 
@@ -109,7 +120,7 @@ impl RatexCallable for ClockFunction {
 }
 
 impl ClockFunction {
-    pub fn new() -> Rc<Self> {
-        Rc::new(ClockFunction {})
+    pub fn new() -> Rc<RefCell<Self>> {
+        Rc::new(RefCell::new(ClockFunction {}))
     }
 }

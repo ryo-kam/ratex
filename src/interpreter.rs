@@ -5,7 +5,7 @@ use std::rc::Rc;
 use crate::ast::{
     Assign, Binary, Block, Break, Call, Class, Expr, ExprAccept, ExprVisitor, Expression, Fun, Get,
     Grouping, If, Lambda, Literal, Logical, Object, Print, RatexCallable, Return, Set, Stmt,
-    StmtAccept, StmtVisitor, Unary, Var, Variable, While,
+    StmtAccept, StmtVisitor, This, Unary, Var, Variable, While,
 };
 use crate::class::RatexClass;
 use crate::environment::Environment;
@@ -224,8 +224,8 @@ impl ExprVisitor<Object> for RatexInterpreter {
 
         match callee {
             Object::Function(fun) => {
-                if arguments.len() == fun.arity()? {
-                    match fun.call(self, arguments) {
+                if arguments.len() == fun.borrow().arity()? {
+                    match fun.borrow().call(self, arguments) {
                         Ok(obj) => return Ok(obj),
                         Err(e) => {
                             if let RatexErrorType::Return(obj) = e.source {
@@ -241,7 +241,9 @@ impl ExprVisitor<Object> for RatexInterpreter {
                 }
             }
             Object::Class(klass) => return Ok(klass.call(self, arguments)?),
-            Object::Instance(instance) => {}
+            Object::Instance(instance) => {
+                println!("ASDAsfafsgag")
+            }
             _ => {}
         }
 
@@ -291,6 +293,10 @@ impl ExprVisitor<Object> for RatexInterpreter {
                 source: RatexErrorType::NonInstanceSet,
             })
         }
+    }
+
+    fn visit_this(&mut self, target: &This) -> Result<Object, RatexError> {
+        self.look_up_variable(target.keyword.clone(), Expr::This(target.clone()))
     }
 }
 

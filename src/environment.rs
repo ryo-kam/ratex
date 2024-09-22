@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, env, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::{
     ast::Object,
@@ -46,6 +46,8 @@ impl Environment {
     }
 
     pub fn get_at(env: Rc<RefCell<Self>>, distance: usize, name: String) -> Object {
+        println!("{}", name.clone());
+        println!("{:?}", env.borrow());
         Self::ancestor(env, distance)
             .borrow()
             .values

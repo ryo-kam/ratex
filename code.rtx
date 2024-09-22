@@ -1,6 +1,7 @@
 class Bacon {
-eat() {
-print "Crunch crunch crunch!";
+    eat() {
+        print this;
+    }
 }
-}
+
 Bacon().eat();

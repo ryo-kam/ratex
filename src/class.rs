@@ -10,18 +10,18 @@ use crate::{
 #[derive(Debug, PartialEq, Clone)]
 pub struct RatexClass {
     name: String,
-    methods: HashMap<String, Rc<RatexFunction>>,
+    methods: HashMap<String, Rc<RefCell<RatexFunction>>>,
 }
 
 impl RatexClass {
-    pub fn new(name: String, methods: HashMap<String, Rc<RatexFunction>>) -> Self {
+    pub fn new(name: String, methods: HashMap<String, Rc<RefCell<RatexFunction>>>) -> Self {
         RatexClass { name, methods }
     }
 
-    fn find_method(&self, name: &String) -> Option<Object> {
+    fn find_method(&self, name: &String) -> Option<Rc<RefCell<RatexFunction>>> {
         if let Some(method) = self.methods.get(name) {
             let func = Rc::clone(method);
-            return Some(Object::Function(func));
+            return Some(func);
         }
 
         None
@@ -66,7 +66,9 @@ impl RatexInstance {
         }
 
         if let Some(method) = self.klass.find_method(&name) {
-            return Ok(method);
+            method.as_ref().borrow_mut().bind(self.clone());
+
+            return Ok(Object::Function(method));
         }
 
         Err(RatexError {

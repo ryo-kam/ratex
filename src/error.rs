@@ -3,7 +3,7 @@ use std::{
     fmt::{Debug, Display, Formatter, Result},
 };
 
-use crate::{ast::Object, token};
+use crate::ast::Object;
 
 #[derive(Debug)]
 pub struct RatexError {

@@ -1,7 +1,8 @@
 use crate::{
     ast::{
         Assign, Binary, Block, Break, Call, Class, Expr, Expression, Fun, Get, Grouping, If,
-        Lambda, Literal, Logical, Object, Print, Return, Set, Stmt, Unary, Var, Variable, While,
+        Lambda, Literal, Logical, Object, Print, Return, Set, Stmt, This, Unary, Var, Variable,
+        While,
     },
     error::{RatexError, RatexErrorType},
     token::{RatexToken as RXT, RatexTokenType as RXTT},
@@ -189,6 +190,12 @@ impl Parser {
 
                 Ok(Expr::Grouping(Grouping {
                     expr: Box::new(expr),
+                }))
+            }
+            RXTT::This => {
+                self.current += 1;
+                Ok(Expr::This(This {
+                    keyword: self.previous().clone(),
                 }))
             }
             RXTT::Identifier => {
