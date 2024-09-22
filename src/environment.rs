@@ -1,14 +1,28 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, fmt, rc::Rc};
 
 use crate::{
     ast::Object,
     error::{RatexError, RatexErrorType},
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Environment {
     values: HashMap<String, Object>,
     enclosing: Option<Rc<RefCell<Environment>>>,
+}
+
+impl fmt::Debug for Environment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut builder = f.debug_struct("Environment");
+        builder.field("values", &self.values);
+
+        if let Some(env) = &self.enclosing {
+            let value = env.borrow();
+            builder.field("enclosing", &value);
+        }
+
+        builder.finish()
+    }
 }
 
 impl Environment {
@@ -46,10 +60,7 @@ impl Environment {
     }
 
     pub fn get_at(env: Rc<RefCell<Self>>, distance: usize, name: String) -> Object {
-        println!("{}", name.clone());
-        println!("{:?}", env.clone().borrow().values.get(&name));
-        println!("{}", distance);
-        println!("{:?}", Self::ancestor(env.clone(), distance));
+        println!("{:?}", &env);
 
         Self::ancestor(env, distance)
             .borrow()

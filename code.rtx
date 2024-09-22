@@ -1,7 +1,11 @@
+var a = 0;
+
 class Bacon {
     eat() {
         print this;
     }
 }
 
-Bacon().eat();
+var b = Bacon();
+b.hello = "hello";
+b.eat();

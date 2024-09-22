@@ -241,9 +241,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
                 }
             }
             Object::Class(klass) => return Ok(klass.call(self, arguments)?),
-            Object::Instance(instance) => {
-                println!("ASDAsfafsgag")
-            }
+            Object::Instance(instance) => {}
             _ => {}
         }
 

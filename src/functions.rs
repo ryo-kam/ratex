@@ -13,30 +13,11 @@ use crate::{
     interpreter::RatexInterpreter,
 };
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub struct RatexFunction {
     name: String,
     declaration: Rc<Stmt>,
     closure: Rc<RefCell<Environment>>,
-}
-
-impl Debug for RatexFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Stmt::Fun(fun) = &*self.declaration {
-            let mut closure_placeholder = self.closure.borrow().clone();
-
-            closure_placeholder
-                .assign(fun.name.lexeme.clone(), Object::Nil)
-                .unwrap();
-
-            f.debug_struct("RatexFunction")
-                .field("declaration", &*self.declaration)
-                .field("closure", &closure_placeholder)
-                .finish()
-        } else {
-            panic!("Function not found");
-        }
-    }
 }
 
 impl RatexCallable for RatexFunction {
@@ -92,6 +73,7 @@ impl RatexFunction {
 
     pub fn bind(&mut self, instance: RatexInstance) {
         let env = Environment::new_child(Rc::clone(&self.closure));
+
         env.borrow_mut().define(
             "this".to_owned(),
             Object::Instance(Rc::new(RefCell::new(instance))),
