@@ -1,3 +1,5 @@
+mod ast_macro;
+
 use std::cell::RefCell;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -8,8 +10,6 @@ use crate::class::{RatexClass, RatexInstance};
 use crate::interpreter::RatexInterpreter;
 use crate::token::RatexToken;
 use crate::RatexError;
-
-mod ast_macro;
 
 #[derive(Debug)]
 pub enum Object {

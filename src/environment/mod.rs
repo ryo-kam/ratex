@@ -33,10 +33,10 @@ impl Environment {
         }))
     }
 
-    pub fn new_child(parent: Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
+    pub fn new_child(parent: &Rc<RefCell<Environment>>) -> Rc<RefCell<Environment>> {
         Rc::new(RefCell::new(Environment {
             values: HashMap::new(),
-            enclosing: Some(parent.clone()),
+            enclosing: Some(Rc::clone(parent)),
         }))
     }
 
@@ -45,6 +45,7 @@ impl Environment {
     }
 
     pub fn get(&self, name: String) -> Result<Object, RatexError> {
+        println!("{:?}", self.values);
         match self.values.get(&name) {
             Some(value) => Ok(value.clone()),
             None => match &self.enclosing {
@@ -60,8 +61,6 @@ impl Environment {
     }
 
     pub fn get_at(env: Rc<RefCell<Self>>, distance: usize, name: String) -> Object {
-        println!("{:?}", &env);
-
         Self::ancestor(env, distance)
             .borrow()
             .values

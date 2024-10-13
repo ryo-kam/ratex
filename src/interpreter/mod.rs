@@ -7,7 +7,7 @@ use crate::ast::{
     Grouping, If, Lambda, Literal, Logical, Object, Print, RatexCallable, Return, Set, Stmt,
     StmtAccept, StmtVisitor, This, Unary, Var, Variable, While,
 };
-use crate::class::RatexClass;
+use crate::class::{RatexClass, RatexInstance};
 use crate::environment::Environment;
 use crate::error::{RatexError, RatexErrorType};
 use crate::functions::{ClockFunction, RatexFunction};
@@ -269,7 +269,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
     fn visit_get(&mut self, target: Rc<Get>) -> Result<Object, RatexError> {
         let obj = self.evaluate(target.object.clone())?;
         if let Object::Instance(instance) = obj {
-            return Ok(instance.borrow().get(target.name.lexeme.clone())?);
+            return Ok(RatexInstance::get(&instance, target.name.lexeme.clone())?);
         }
 
         Err(RatexError {
@@ -300,7 +300,7 @@ impl ExprVisitor<Object> for RatexInterpreter {
 
 impl StmtVisitor<()> for RatexInterpreter {
     fn visit_block(&mut self, target: Rc<Block>) -> Result<(), RatexError> {
-        let block_env = Environment::new_child(Rc::clone(&self.environment));
+        let block_env = Environment::new_child(&self.environment);
 
         self.execute_block(target.statements.clone(), block_env)?;
 
@@ -330,7 +330,7 @@ impl StmtVisitor<()> for RatexInterpreter {
         let function = RatexFunction::new(
             name.clone(),
             Rc::new(Stmt::Fun(target)),
-            Environment::new_child(Rc::clone(&self.environment)),
+            Environment::new_child(&self.environment),
         );
 
         self.environment
@@ -406,7 +406,7 @@ impl StmtVisitor<()> for RatexInterpreter {
                 let function = RatexFunction::new(
                     fun.name.lexeme.clone(),
                     Rc::clone(declaration),
-                    Environment::new_child(Rc::clone(&self.environment)),
+                    Environment::new_child(&self.environment),
                 );
                 methods.insert(fun.name.lexeme.clone(), function);
             }

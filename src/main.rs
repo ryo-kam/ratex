@@ -1,19 +1,18 @@
 use std::{
-    borrow::Borrow,
     env,
     io::{self, Write},
     rc::Rc,
 };
 
-mod ast;
-mod class;
-mod environment;
+pub mod ast;
+pub mod class;
+pub mod environment;
 mod error;
-mod functions;
-mod interpreter;
-mod parser;
-mod resolver;
-mod scanner;
+pub mod functions;
+pub mod interpreter;
+pub mod parser;
+pub mod resolver;
+pub mod scanner;
 mod token;
 
 use ast::Stmt;
@@ -81,7 +80,7 @@ fn run_prompt() -> Result<(), RatexError> {
 
         if !parser.has_error() {
             for statement in ast {
-                match statement.borrow() {
+                match statement.as_ref() {
                     Stmt::Expression(expr) => {
                         match Rc::clone(&interpreter)
                             .borrow_mut()

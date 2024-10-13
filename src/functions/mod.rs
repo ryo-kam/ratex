@@ -71,13 +71,11 @@ impl RatexFunction {
         }))
     }
 
-    pub fn bind(&mut self, instance: RatexInstance) {
-        let env = Environment::new_child(Rc::clone(&self.closure));
+    pub fn bind(&mut self, instance: &Rc<RefCell<RatexInstance>>) {
+        let env = Environment::new_child(&self.closure);
 
-        env.borrow_mut().define(
-            "this".to_owned(),
-            Object::Instance(Rc::new(RefCell::new(instance))),
-        );
+        env.borrow_mut()
+            .define("this".to_owned(), Object::Instance(Rc::clone(instance)));
 
         self.closure = env;
     }

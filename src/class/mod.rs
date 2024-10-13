@@ -60,14 +60,13 @@ impl RatexInstance {
         self.klass.name()
     }
 
-    pub fn get(&self, name: String) -> Result<Object, RatexError> {
-        if let Some(value) = self.fields.get(&name) {
+    pub fn get(instance: &Rc<RefCell<Self>>, name: String) -> Result<Object, RatexError> {
+        if let Some(value) = instance.borrow().fields.get(&name) {
             return Ok(value.clone());
         }
 
-        if let Some(method) = self.klass.find_method(&name) {
-            method.as_ref().borrow_mut().bind(self.clone());
-
+        if let Some(method) = instance.borrow().klass.find_method(&name) {
+            method.as_ref().borrow_mut().bind(&Rc::clone(instance));
             return Ok(Object::Function(method));
         }
 
