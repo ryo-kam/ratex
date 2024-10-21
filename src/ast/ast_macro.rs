@@ -1,3 +1,4 @@
+#[macro_export]
 macro_rules! ast_derive {
     ($name: ident, $($type: ident ($($prop: ident : $class: ty),*)),+) => {
         paste::paste! {
@@ -69,5 +70,3 @@ macro_rules! ast_derive {
         }
     }
 }
-
-pub(crate) use ast_derive;

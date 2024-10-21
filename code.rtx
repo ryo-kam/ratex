@@ -1,6 +1,6 @@
 class Bacon {
     eat() {
-        print self.hello();
+        print this.hello();
     }
 
     hello() {

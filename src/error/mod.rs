@@ -1,0 +1,90 @@
+mod runtime_error;
+
+use std::{
+    error::Error,
+    fmt::{Debug, Display, Formatter, Result},
+};
+
+use crate::run;
+use crate::{ast::Object, token::RatexToken};
+
+// #[derive(Debug)]
+// pub enum RatexErrorType {
+
+// }
+
+// impl Display for RatexErrorType {
+//     fn fmt(&self, f: &mut Formatter) -> Result {
+//         match self {
+//             RatexErrorType::UnknownToken(line) => {
+//                 write!(f, "line {}, unknown token {}", line, token)
+//             }
+//             RatexErrorType::UnterminatedString(line, string) => {
+//                 write!(f, "line {}, unterminated string: {}", line, string)
+//             }
+//             RatexErrorType::UnterminatedBlockComment(line, index) => {
+//                 write!(f, "line {}, unterminated block comment: {}", line, index)
+//             }
+//             RatexErrorType::UnexpectedToken(line, token) => {
+//                 write!(f, "line {}, unexpected token '{}'", line, token)
+//             }
+//             RatexErrorType::ExpectedToken(line, string) => {
+//                 write!(
+//                     f,
+//                     "line {}, expected token '{}' but not found",
+//                     line, string
+//                 )
+//             }
+//             RatexErrorType::UndefinedIdentifier(identifier) => {
+//                 write!(f, "tried to read undefined variable '{}'", identifier)
+//             }
+//             RatexErrorType::InvalidAssignment(line) => {
+//                 write!(f, "line {}, invalid assignment", line)
+//             }
+//             RatexErrorType::InvalidLogicalOperation(line) => {
+//                 write!(f, "line {}, invalid logical operation", line)
+//             }
+//             RatexErrorType::InvalidFunctionCall => {
+//                 write!(f, "invalid function call")
+//             }
+//             RatexErrorType::IncompatibleArity => {
+//                 write!(f, "too many or too few arguments")
+//             }
+//             RatexErrorType::VarInInitialiser => {
+//                 write!(f, "can't read local variable in its own initialiser")
+//             }
+//             RatexErrorType::Break => {
+//                 write!(f, "break statement reached")
+//             }
+//             RatexErrorType::Return(_) => {
+//                 write!(f, "returned")
+//             }
+//             RatexErrorType::RedeclareLocalVariable(line) => {
+//                 write!(
+//                     f,
+//                     "line {}, there is already a variable with this name",
+//                     line
+//                 )
+//             }
+//             RatexErrorType::InvalidReturnLocation => write!(f, "return called outside a function"),
+//             RatexErrorType::AccessUnknownField(s) => {
+//                 write!(f, "tried to access unknown field \"{s}\"")
+//             }
+//             RatexErrorType::NonInstanceSet => write!(f, "only class instance have fields"),
+//         }
+//     }
+// }
+
+// #[derive(Debug)]
+// pub struct RatexError {
+//     pub source: RatexErrorType,
+//     pub token: RatexToken,
+// }
+
+// impl Display for RatexError {
+//     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+//         write!(f, "{}", self.source)
+//     }
+// }
+
+// impl Error for RatexError {}

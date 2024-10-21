@@ -356,7 +356,6 @@ impl StmtVisitor<()> for RatexInterpreter {
 
     fn visit_print(&mut self, target: Rc<Print>) -> Result<(), RatexError> {
         let value = self.evaluate(target.expr.clone())?;
-        println!("{value}");
         Ok(())
     }
 

@@ -45,7 +45,6 @@ impl Environment {
     }
 
     pub fn get(&self, name: String) -> Result<Object, RatexError> {
-        println!("{:?}", self.values);
         match self.values.get(&name) {
             Some(value) => Ok(value.clone()),
             None => match &self.enclosing {

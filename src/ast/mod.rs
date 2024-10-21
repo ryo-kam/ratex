@@ -5,11 +5,10 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use crate::ast::ast_macro::ast_derive;
 use crate::class::{RatexClass, RatexInstance};
 use crate::interpreter::RatexInterpreter;
 use crate::token::RatexToken;
-use crate::RatexError;
+use crate::{ast_derive, RatexError};
 
 #[derive(Debug)]
 pub enum Object {
